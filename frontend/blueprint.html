@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blueprint — Checkmark</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    body { font-family: 'Inter', sans-serif; }
+    code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+    /* Subtle grid background */
+    .grid-bg {
+      background-image:
+        linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+      background-size: 32px 32px;
+    }
+
+    /* Accordion toggle */
+    .adr-body { display: none; }
+    .adr-body.open { display: block; }
+
+    .adr-toggle-icon { transition: transform 0.25s ease; }
+    .adr-toggle-icon.open { transform: rotate(180deg); }
+
+    /* Smooth section reveal */
+    .reveal {
+      opacity: 0;
+      transform: translateY(16px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Method badges */
+    .badge-get    { background: #052e16; color: #4ade80; border-color: #166534; }
+    .badge-post   { background: #172554; color: #93c5fd; border-color: #1e40af; }
+    .badge-put    { background: #1c1917; color: #fdba74; border-color: #92400e; }
+    .badge-patch  { background: #1a1a2e; color: #c4b5fd; border-color: #5b21b6; }
+    .badge-delete { background: #2d0707; color: #fca5a5; border-color: #991b1b; }
+
+    /* Priority pill */
+    .priority-low    { background: #052e16; color: #4ade80; }
+    .priority-medium { background: #1c1917; color: #fbbf24; }
+    .priority-high   { background: #2d0707; color: #f87171; }
+  </style>
+</head>
+<body class="bg-[#0a0a0f] text-white min-h-screen flex flex-col grid-bg">
+
+  <!-- ─── Nav ─── -->
+  <header class="sticky top-0 z-50 border-b border-white/5 bg-[#0a0a0f]/80 backdrop-blur-md">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 text-white/70 hover:text-white transition-colors text-sm font-medium">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10 12L6 8l4-4"/>
+        </svg>
+        Home
+      </a>
+      <span class="text-xs font-mono text-indigo-400/60 tracking-widest uppercase">Blueprint</span>
+      <div class="flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-xs text-white/30">live spec</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 max-w-5xl mx-auto px-6 py-16 w-full space-y-24">
+
+    <!-- ─── Hero ─── -->
+    <section class="reveal text-center space-y-4">
+      <div class="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-1.5 text-indigo-300 text-xs font-mono tracking-widest uppercase mb-2">
+        /blueprint
+      </div>
+      <h1 class="text-4xl sm:text-5xl font-black tracking-tight">
+        How this thing is built
+      </h1>
+      <p class="text-white/40 text-lg max-w-xl mx-auto">
+        Architectural decisions, data models, API surface, and user stories — all in one place.
+      </p>
+
+      <!-- Stack summary pills -->
+      <div class="flex flex-wrap justify-center gap-3 pt-4">
+        <span class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm">
+          <span class="text-yellow-400">⚡</span> Vanilla JS
+        </span>
+        <span class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm">
+          <span class="text-cyan-400">🎨</span> Tailwind CSS
+        </span>
+        <span class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm">
+          <span class="text-green-400">🐍</span> FastAPI
+        </span>
+        <span class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm">
+          <span class="text-blue-400">🐘</span> PostgreSQL
+        </span>
+        <span class="flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-4 py-1.5 text-sm">
+          <span class="text-purple-400">🚂</span> Railway
+        </span>
+      </div>
+    </section>
+
+    <!-- ─── Stack matrix ─── -->
+    <section class="reveal space-y-6">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">01</span>
+        <h2 class="text-2xl font-bold">Stack at a glance</h2>
+      </div>
+
+      <div class="overflow-x-auto rounded-xl border border-white/8">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-white/8 bg-white/3">
+              <th class="text-left px-5 py-3 text-white/50 font-medium">Layer</th>
+              <th class="text-left px-5 py-3 text-white/50 font-medium">Choice</th>
+              <th class="text-left px-5 py-3 text-white/50 font-medium">Core reason</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-white/5">
+            <tr class="hover:bg-white/2 transition-colors">
+              <td class="px-5 py-3.5 text-white/60">Frontend</td>
+              <td class="px-5 py-3.5 font-semibold">Vanilla JS + HTML</td>
+              <td class="px-5 py-3.5 text-white/50">No runtime overhead, browser native, instant load</td>
+            </tr>
+            <tr class="hover:bg-white/2 transition-colors">
+              <td class="px-5 py-3.5 text-white/60">Styling</td>
+              <td class="px-5 py-3.5 font-semibold">Tailwind CSS</td>
+              <td class="px-5 py-3.5 text-white/50">Utility classes in one file, no separate CSS, AI generates accurately</td>
+            </tr>
+            <tr class="hover:bg-white/2 transition-colors">
+              <td class="px-5 py-3.5 text-white/60">Backend</td>
+              <td class="px-5 py-3.5 font-semibold">FastAPI (Python)</td>
+              <td class="px-5 py-3.5 text-white/50">Built-in validation, live <code class="text-indigo-300">/docs</code>, async, modern</td>
+            </tr>
+            <tr class="hover:bg-white/2 transition-colors">
+              <td class="px-5 py-3.5 text-white/60">Database</td>
+              <td class="px-5 py-3.5 font-semibold">PostgreSQL</td>
+              <td class="px-5 py-3.5 text-white/50">Structured relational data, Railway native plugin, industry standard</td>
+            </tr>
+            <tr class="hover:bg-white/2 transition-colors">
+              <td class="px-5 py-3.5 text-white/60">Hosting</td>
+              <td class="px-5 py-3.5 font-semibold">Railway</td>
+              <td class="px-5 py-3.5 text-white/50">Already paid for, zero friction, native Postgres, GitHub integration</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ─── ADRs ─── -->
+    <section class="reveal space-y-6">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">02</span>
+        <h2 class="text-2xl font-bold">Architectural Decision Records</h2>
+      </div>
+      <p class="text-white/40 text-sm">Every technology choice is documented. Click any ADR to expand the full reasoning.</p>
+
+      <div class="space-y-3" id="adr-list">
+
+        <!-- ADR-001 -->
+        <div class="adr-card border border-white/8 rounded-xl overflow-hidden">
+          <button class="adr-trigger w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors text-left">
+            <div class="flex items-center gap-4">
+              <span class="mono text-xs text-indigo-400/70 tracking-wider">ADR-001</span>
+              <span class="font-semibold">Frontend: Vanilla JS + HTML</span>
+              <span class="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full px-2.5 py-0.5">Accepted</span>
+            </div>
+            <svg class="adr-toggle-icon w-4 h-4 text-white/30 flex-shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6l4 4 4-4"/>
+            </svg>
+          </button>
+          <div class="adr-body border-t border-white/5 px-5 py-5 space-y-5 bg-white/1">
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Context</p>
+              <p class="text-white/70 text-sm leading-relaxed">The frontend needs to deliver a UI for managing todos. The app is small, will not grow complex, and the primary goals are speed and simplicity.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Decision</p>
+              <p class="text-white/70 text-sm">Use plain HTML and Vanilla JavaScript with no frontend framework.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Reasons</p>
+              <ul class="text-white/70 text-sm space-y-1.5 list-none">
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>The browser already speaks HTML and JavaScript natively. No framework runtime sitting between the code and the browser.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Frameworks like React ship a runtime to the browser — extra kilobytes to download, parse, and execute. Vanilla JS eliminates that entirely.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>AI generates vanilla JS accurately — no framework-specific patterns, version conflicts, or abstraction layers to get wrong.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Instant load, zero dependencies, nothing holding it back.</li>
+              </ul>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-3 font-medium">Alternatives rejected</p>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">React</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Ships a runtime and requires a build pipeline. Unnecessary overhead for a small app.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Next.js</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Full-stack React framework. Solves problems this app does not have.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Vue 3</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Same category as React. Reactive component model is unnecessary overhead here.</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-3">
+              <p class="text-xs text-amber-400/70 uppercase tracking-wider mb-1 font-medium">Tradeoff</p>
+              <p class="text-white/50 text-xs leading-relaxed">Vanilla JS can become disorganised without discipline as the app grows. No enforced component structure. Acceptable at this scale.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADR-002 -->
+        <div class="adr-card border border-white/8 rounded-xl overflow-hidden">
+          <button class="adr-trigger w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors text-left">
+            <div class="flex items-center gap-4">
+              <span class="mono text-xs text-indigo-400/70 tracking-wider">ADR-002</span>
+              <span class="font-semibold">Styling: Tailwind CSS</span>
+              <span class="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full px-2.5 py-0.5">Accepted</span>
+            </div>
+            <svg class="adr-toggle-icon w-4 h-4 text-white/30 flex-shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6l4 4 4-4"/>
+            </svg>
+          </button>
+          <div class="adr-body border-t border-white/5 px-5 py-5 space-y-5 bg-white/1">
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Context</p>
+              <p class="text-white/70 text-sm leading-relaxed">The app needs a styling approach. The goal is to move fast, keep the codebase simple, and avoid context switching between files.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Decision</p>
+              <p class="text-white/70 text-sm">Use Tailwind CSS utility classes for all styling.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Reasons</p>
+              <ul class="text-white/70 text-sm space-y-1.5">
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Tailwind keeps styling in the same file as the HTML. No separate CSS files, no switching context, no inventing class names.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Utility classes do exactly what they say — <code class="text-indigo-300 text-xs">rounded-lg</code>, <code class="text-indigo-300 text-xs">flex</code>, <code class="text-indigo-300 text-xs">gap-4</code>. No cascade to reason about.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>AI generates Tailwind accurately and consistently — no custom class names to maintain across files.</li>
+              </ul>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-3 font-medium">Alternatives rejected</p>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Plain CSS</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Separate files, context switching, custom class names AI generates inconsistently.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">CSS Modules</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Solves a scoping problem this app won't have. Added build config not worth it.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Bootstrap</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Opinionated component classes. Harder to customise, heavier, less suited to a unique UI.</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-3">
+              <p class="text-xs text-amber-400/70 uppercase tracking-wider mb-1 font-medium">Tradeoff</p>
+              <p class="text-white/50 text-xs leading-relaxed">Class names can make HTML verbose. A single element might have many classes. Readable and manageable at this scale.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADR-003 -->
+        <div class="adr-card border border-white/8 rounded-xl overflow-hidden">
+          <button class="adr-trigger w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors text-left">
+            <div class="flex items-center gap-4">
+              <span class="mono text-xs text-indigo-400/70 tracking-wider">ADR-003</span>
+              <span class="font-semibold">Backend: FastAPI (Python)</span>
+              <span class="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full px-2.5 py-0.5">Accepted</span>
+            </div>
+            <svg class="adr-toggle-icon w-4 h-4 text-white/30 flex-shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6l4 4 4-4"/>
+            </svg>
+          </button>
+          <div class="adr-body border-t border-white/5 px-5 py-5 space-y-5 bg-white/1">
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Context</p>
+              <p class="text-white/70 text-sm leading-relaxed">The app needs a backend API for todo CRUD and user auth. The question is which framework and language to use.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Decision</p>
+              <p class="text-white/70 text-sm">Use FastAPI with Python.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Reasons</p>
+              <ul class="text-white/70 text-sm space-y-1.5">
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Auto-generates a live interactive <code class="text-indigo-300 text-xs">/docs</code> page the moment routes are written. Every endpoint testable in the browser.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Pydantic validation is built in — define the data shape once, FastAPI rejects bad requests before your code runs.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Async by default — faster under load, modern Python.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>AI writes FastAPI + SQLAlchemy + Postgres accurately.</li>
+              </ul>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-3 font-medium">Alternatives rejected</p>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Flask</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Blank slate — just routing. Validation and docs require extra libraries. Older choice.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Node.js + Express</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Second language on the backend. No built-in validation or docs.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Next.js API Routes</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Collapses frontend + backend. Couples concerns and forces React, already rejected.</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-3">
+              <p class="text-xs text-amber-400/70 uppercase tracking-wider mb-1 font-medium">Tradeoff</p>
+              <p class="text-white/50 text-xs leading-relaxed">Two Railway services instead of one — CORS headers must be configured and there are two deploy logs to monitor.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADR-004 -->
+        <div class="adr-card border border-white/8 rounded-xl overflow-hidden">
+          <button class="adr-trigger w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors text-left">
+            <div class="flex items-center gap-4">
+              <span class="mono text-xs text-indigo-400/70 tracking-wider">ADR-004</span>
+              <span class="font-semibold">Database: PostgreSQL</span>
+              <span class="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full px-2.5 py-0.5">Accepted</span>
+            </div>
+            <svg class="adr-toggle-icon w-4 h-4 text-white/30 flex-shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6l4 4 4-4"/>
+            </svg>
+          </button>
+          <div class="adr-body border-t border-white/5 px-5 py-5 space-y-5 bg-white/1">
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Context</p>
+              <p class="text-white/70 text-sm leading-relaxed">The app needs persistent storage. Todo data is structured and relational — predictable fields and user ownership.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Decision</p>
+              <p class="text-white/70 text-sm">Use PostgreSQL via Railway's native database plugin.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Reasons</p>
+              <ul class="text-white/70 text-sm space-y-1.5">
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Railway native plugin — one click adds it, <code class="text-indigo-300 text-xs">DATABASE_URL</code> injected automatically.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Todo data is structured and predictable. Exactly what a relational database is designed for.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Enforces strict data integrity by default — rejects bad data rather than silently accepting it.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Industry standard. SQLAlchemy pairs with it cleanly.</li>
+              </ul>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-3 font-medium">Alternatives rejected</p>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">SQLite</p>
+                  <p class="text-white/50 text-xs leading-relaxed">File on disk — wiped on every Railway redeploy. Not designed for concurrent writes.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">MySQL</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Same category but Postgres is stricter on integrity and better supported in Python ecosystem.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">MongoDB</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Document DB for schema-less data. Todo data is relational — a fixed schema is a feature here.</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-3">
+              <p class="text-xs text-amber-400/70 uppercase tracking-wider mb-1 font-medium">Tradeoff</p>
+              <p class="text-white/50 text-xs leading-relaxed">Schema migrations require thought — adding a column requires a migration via Alembic. Standard practice, accepted.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ADR-005 -->
+        <div class="adr-card border border-white/8 rounded-xl overflow-hidden">
+          <button class="adr-trigger w-full flex items-center justify-between px-5 py-4 hover:bg-white/3 transition-colors text-left">
+            <div class="flex items-center gap-4">
+              <span class="mono text-xs text-indigo-400/70 tracking-wider">ADR-005</span>
+              <span class="font-semibold">Hosting: Railway</span>
+              <span class="text-xs bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full px-2.5 py-0.5">Accepted</span>
+            </div>
+            <svg class="adr-toggle-icon w-4 h-4 text-white/30 flex-shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M4 6l4 4 4-4"/>
+            </svg>
+          </button>
+          <div class="adr-body border-t border-white/5 px-5 py-5 space-y-5 bg-white/1">
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Context</p>
+              <p class="text-white/70 text-sm leading-relaxed">The app needs to be deployed somewhere accessible. The question is which hosting platform to use.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Decision</p>
+              <p class="text-white/70 text-sm">Use Railway for all services — static frontend, Python backend, and PostgreSQL.</p>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Reasons</p>
+              <ul class="text-white/70 text-sm space-y-1.5">
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Already paying for it. No cost justification, no new account, no free tier limitations.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Connect a GitHub repo, it detects what's running, deploys it. Push to main, it redeploys automatically.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Native Postgres plugin — one click, connection string injected automatically.</li>
+                <li class="flex gap-2"><span class="text-indigo-400 mt-0.5">→</span>Entire stack lives in one Railway project.</li>
+              </ul>
+            </div>
+            <div>
+              <p class="text-xs text-white/40 uppercase tracking-wider mb-3 font-medium">Alternatives rejected</p>
+              <div class="grid sm:grid-cols-3 gap-3">
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Vercel</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Optimised for Next.js. Python backend on Vercel needs serverless config with cold start issues.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">Render</p>
+                  <p class="text-white/50 text-xs leading-relaxed">Valid alternative but requires a new account with no additional benefit over an existing Railway sub.</p>
+                </div>
+                <div class="bg-red-500/5 border border-red-500/10 rounded-lg px-4 py-3">
+                  <p class="text-red-400 text-xs font-mono mb-1">AWS / GCP / Azure</p>
+                  <p class="text-white/50 text-xs leading-relaxed">More power but IAM, networking, and operational overhead is the wrong complexity for this app.</p>
+                </div>
+              </div>
+            </div>
+            <div class="bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-3">
+              <p class="text-xs text-amber-400/70 uppercase tracking-wider mb-1 font-medium">Tradeoff</p>
+              <p class="text-white/50 text-xs leading-relaxed">Railway is not the cheapest if cost were the primary concern. Existing subscription removes that concern entirely.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── Data model ─── -->
+    <section class="reveal space-y-8">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">03</span>
+        <h2 class="text-2xl font-bold">Data Model</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 gap-6">
+
+        <!-- Users table -->
+        <div class="border border-white/8 rounded-xl overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-white/8 bg-white/3 flex items-center gap-3">
+            <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 8a3 3 0 100-6 3 3 0 000 6zM2 14a6 6 0 0112 0"/>
+            </svg>
+            <span class="font-semibold text-sm">users</span>
+          </div>
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="border-b border-white/5">
+                <th class="text-left px-4 py-2.5 text-white/40 font-medium">field</th>
+                <th class="text-left px-4 py-2.5 text-white/40 font-medium">type</th>
+                <th class="text-left px-4 py-2.5 text-white/40 font-medium">notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">id</td><td class="px-4 py-2.5 text-white/50">integer</td><td class="px-4 py-2.5 text-white/30">auto, PK</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">email</td><td class="px-4 py-2.5 text-white/50">string</td><td class="px-4 py-2.5 text-white/30">unique, required</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">name</td><td class="px-4 py-2.5 text-white/50">string</td><td class="px-4 py-2.5 text-white/30">required</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">password_hash</td><td class="px-4 py-2.5 text-white/50">string</td><td class="px-4 py-2.5 text-white/30">null if Google</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">google_id</td><td class="px-4 py-2.5 text-white/50">string</td><td class="px-4 py-2.5 text-white/30">null if password</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">created_at</td><td class="px-4 py-2.5 text-white/50">timestamp</td><td class="px-4 py-2.5 text-white/30">auto</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Todos table -->
+        <div class="border border-white/8 rounded-xl overflow-hidden">
+          <div class="px-5 py-3.5 border-b border-white/8 bg-white/3 flex items-center gap-3">
+            <svg class="w-4 h-4 text-indigo-400" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 4h10M3 8h10M3 12h6"/>
+            </svg>
+            <span class="font-semibold text-sm">todos</span>
+          </div>
+          <table class="w-full text-xs">
+            <thead>
+              <tr class="border-b border-white/5">
+                <th class="text-left px-4 py-2.5 text-white/40 font-medium">field</th>
+                <th class="text-left px-4 py-2.5 text-white/40 font-medium">type</th>
+                <th class="text-left px-4 py-2.5 text-white/40 font-medium">notes</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">id</td><td class="px-4 py-2.5 text-white/50">integer</td><td class="px-4 py-2.5 text-white/30">auto, PK</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">user_id</td><td class="px-4 py-2.5 text-white/50">integer</td><td class="px-4 py-2.5 text-white/30">FK → users.id</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">title</td><td class="px-4 py-2.5 text-white/50">string</td><td class="px-4 py-2.5 text-white/30">required</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">description</td><td class="px-4 py-2.5 text-white/50">string</td><td class="px-4 py-2.5 text-white/30">optional</td></tr>
+              <tr>
+                <td class="px-4 py-2.5 mono text-indigo-300">priority</td>
+                <td class="px-4 py-2.5 text-white/50">enum</td>
+                <td class="px-4 py-2.5">
+                  <span class="priority-low rounded px-1.5 py-0.5 text-xs mr-1">low</span>
+                  <span class="priority-medium rounded px-1.5 py-0.5 text-xs mr-1">medium</span>
+                  <span class="priority-high rounded px-1.5 py-0.5 text-xs">high</span>
+                </td>
+              </tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">completed</td><td class="px-4 py-2.5 text-white/50">boolean</td><td class="px-4 py-2.5 text-white/30">default false</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">created_at</td><td class="px-4 py-2.5 text-white/50">timestamp</td><td class="px-4 py-2.5 text-white/30">auto</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Relationship note -->
+      <div class="flex items-start gap-3 bg-indigo-500/5 border border-indigo-500/15 rounded-xl px-5 py-4">
+        <svg class="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 16 16" stroke="currentColor" stroke-width="1.8">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 1v6m0 0l-2-2m2 2l2-2M4 9a4 4 0 008 0"/>
+        </svg>
+        <div class="text-sm text-white/60 space-y-1">
+          <p>A <span class="text-white">user</span> has many <span class="text-white">todos</span>. A todo belongs to one user.</p>
+          <p>A user can only see and interact with their own todos. All <code class="text-indigo-300 text-xs">/todos</code> endpoints require authentication.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── API ─── -->
+    <section class="reveal space-y-6">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">04</span>
+        <h2 class="text-2xl font-bold">API Surface</h2>
+      </div>
+
+      <div class="border border-white/8 rounded-xl overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-white/8 bg-white/3 flex items-center justify-between">
+          <span class="text-sm font-semibold">Endpoints</span>
+          <span class="text-xs text-white/30 mono">base: /api</span>
+        </div>
+        <div class="divide-y divide-white/5">
+
+          <!-- Auth group -->
+          <div class="px-5 py-2 bg-white/1">
+            <span class="text-xs text-white/30 uppercase tracking-widest font-medium">Auth</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-post border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">POST</span>
+            <code class="text-sm text-white/80">/auth/register</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Create a new account with email and password</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-post border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">POST</span>
+            <code class="text-sm text-white/80">/auth/login</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Log in, returns an auth token</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-post border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">POST</span>
+            <code class="text-sm text-white/80">/auth/logout</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Log out, invalidates the token</span>
+          </div>
+
+          <!-- Todos group -->
+          <div class="px-5 py-2 bg-white/1">
+            <span class="text-xs text-white/30 uppercase tracking-widest font-medium">Todos — requires auth</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-get border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">GET</span>
+            <code class="text-sm text-white/80">/todos</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Get all todos for the logged-in user</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-post border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">POST</span>
+            <code class="text-sm text-white/80">/todos</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Create a new todo</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-put border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">PUT</span>
+            <code class="text-sm text-white/80">/todos/<span class="text-white/40">{id}</span></code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Edit title, description, or priority</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-patch border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">PATCH</span>
+            <code class="text-sm text-white/80">/todos/<span class="text-white/40">{id}</span>/complete</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Mark a todo as complete</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-delete border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">DELETE</span>
+            <code class="text-sm text-white/80">/todos/<span class="text-white/40">{id}</span></code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Permanently delete a todo</span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── User stories ─── -->
+    <section class="reveal space-y-6">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">05</span>
+        <h2 class="text-2xl font-bold">User Stories</h2>
+      </div>
+
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#1</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Register</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to register an account so that my todos are private to me.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#2</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Log in</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to log in so that I can access my todos.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#3</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Log out</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to log out so that my account is secure when I'm done.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#4</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Create todo</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to create a todo with a title, description, and priority so I can organise my tasks.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#5</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">View todos</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to view all my todos so that I can see everything I need to do.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#6</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Complete</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to mark a todo as complete so I can track my progress.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#7</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Edit</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to edit a todo so I can update it if things change.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#8</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Delete</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to delete a todo so I can remove tasks I no longer need.</p>
+        </div>
+        <div class="border border-white/8 rounded-xl p-5 hover:border-indigo-500/30 transition-colors">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="mono text-xs text-indigo-400/60">#9</span>
+            <span class="text-xs text-white/40 uppercase tracking-wider font-medium">Filter</span>
+          </div>
+          <p class="text-white/70 text-sm leading-relaxed">As a user, I want to filter by priority so I can focus on what matters most.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─── Out of scope ─── -->
+    <section class="reveal space-y-6">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">06</span>
+        <h2 class="text-2xl font-bold">Out of Scope <span class="text-white/30 font-normal text-lg">— for now</span></h2>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Chaos button</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Easter eggs on keywords</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Daily themes</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Sound effects</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Confetti &amp; particle effects</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Due dates on todos</span>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ─── Footer ─── -->
+  <footer class="border-t border-white/5 py-6 px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-white/30 text-sm max-w-5xl mx-auto w-full">
+    <span>&copy; 2026 Checkmark</span>
+    <nav class="flex items-center gap-6">
+      <a href="/" class="hover:text-white/70 transition-colors duration-200">Home</a>
+      <a href="/login" class="hover:text-white/70 transition-colors duration-200">Log in</a>
+      <a href="/register" class="hover:text-white/70 transition-colors duration-200">Register</a>
+    </nav>
+  </footer>
+
+  <script>
+    // ─── Accordion (ADR cards) ──────────────────────────────────────────────
+    document.querySelectorAll('.adr-trigger').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        const card = btn.closest('.adr-card');
+        const body = card.querySelector('.adr-body');
+        const icon = btn.querySelector('.adr-toggle-icon');
+        const isOpen = body.classList.contains('open');
+
+        // Close all
+        document.querySelectorAll('.adr-body').forEach(function (b) { b.classList.remove('open'); });
+        document.querySelectorAll('.adr-toggle-icon').forEach(function (i) { i.classList.remove('open'); });
+
+        // Toggle clicked one
+        if (!isOpen) {
+          body.classList.add('open');
+          icon.classList.add('open');
+        }
+      });
+    });
+
+    // ─── Scroll reveal ──────────────────────────────────────────────────────
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('.reveal').forEach(function (el) {
+      observer.observe(el);
+    });
+  </script>
+
+</body>
+</html>

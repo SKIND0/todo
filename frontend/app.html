@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Todos — Checkmark</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
+
+    /* ── Themes ──────────────────────────────────────────────────────────── */
+    body[data-theme="cream"] {
+      --bg-page:      #FFFBF5;
+      --bg-card:      #FFFFFF;
+      --bg-subtle:    #FFF7ED;
+      --text-primary: #1a1208;
+      --text-muted:   #78614a;
+      --border:       #e8d5b7;
+      --accent:       #f97316;
+      --accent-hover: #ea6c0a;
+      --accent-light: #fff0e6;
+    }
+    body[data-theme="purple"] {
+      --bg-page:      #F7F5FF;
+      --bg-card:      #FFFFFF;
+      --bg-subtle:    #EDE9FE;
+      --text-primary: #1e1340;
+      --text-muted:   #6b5fa8;
+      --border:       #c4b5fd;
+      --accent:       #7c3aed;
+      --accent-hover: #6d28d9;
+      --accent-light: #ede9fe;
+    }
+    body[data-theme="sky"] {
+      --bg-page:      #F0FAFB;
+      --bg-card:      #FFFFFF;
+      --bg-subtle:    #CFFAFE;
+      --text-primary: #0c2a30;
+      --text-muted:   #3d8a95;
+      --border:       #a7d9e2;
+      --accent:       #0891b2;
+      --accent-hover: #0e7490;
+      --accent-light: #cffafe;
+    }
+    body[data-theme="rose"] {
+      --bg-page:      #FFF5F7;
+      --bg-card:      #FFFFFF;
+      --bg-subtle:    #FFE4E6;
+      --text-primary: #2d0a14;
+      --text-muted:   #9f4159;
+      --border:       #fecdd3;
+      --accent:       #e11d48;
+      --accent-hover: #be123c;
+      --accent-light: #ffe4e6;
+    }
+    body[data-theme="forest"] {
+      --bg-page:      #F3FAF3;
+      --bg-card:      #FFFFFF;
+      --bg-subtle:    #DCFCE7;
+      --text-primary: #0a1f0a;
+      --text-muted:   #3a6b3a;
+      --border:       #a7d9a7;
+      --accent:       #16a34a;
+      --accent-hover: #15803d;
+      --accent-light: #dcfce7;
+    }
+
+    /* ── Base ────────────────────────────────────────────────────────────── */
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* ── Priority pills — semantic, never change with theme ──────────────── */
+    .pill-high   { background: #fff0e6; color: #c2410c; }
+    .pill-medium { background: #fef9e7; color: #b45309; }
+    .pill-low    { background: #f0fdf4; color: #166534; }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────── */
+    .btn-accent {
+      background-color: var(--accent);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+    }
+    .btn-accent:hover  { background-color: var(--accent-hover); }
+    .btn-accent:active { transform: scale(0.97); }
+
+    .btn-outline {
+      background: transparent;
+      border: 1.5px solid var(--border);
+      color: var(--text-primary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    .btn-outline:hover { background-color: var(--bg-subtle); }
+
+    .site-link { color: var(--text-muted); transition: color 0.2s ease; }
+    .site-link:hover { color: var(--text-primary); }
+
+    /* ── Filter buttons ──────────────────────────────────────────────────── */
+    .filter-btn {
+      padding: 5px 15px;
+      border-radius: 9999px;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      border: 1.5px solid var(--border);
+      color: var(--text-muted);
+      background: transparent;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+    }
+    .filter-btn:hover  { border-color: var(--accent); color: var(--text-primary); }
+    .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+    /* ── Form inputs ─────────────────────────────────────────────────────── */
+    .form-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1.5px solid var(--border);
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 0.9375rem;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .form-input::placeholder { color: var(--text-muted); opacity: 0.6; }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-light);
+    }
+    select.form-input { cursor: pointer; }
+
+    /* ── Todo card ───────────────────────────────────────────────────────── */
+    .todo-card {
+      transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.35s ease;
+    }
+    .todo-card:hover { box-shadow: 0 2px 14px rgba(0,0,0,0.06); }
+    .todo-card:hover .todo-actions { opacity: 1; }
+    .todo-actions { opacity: 0.3; transition: opacity 0.15s ease; }
+    @media (hover: none) { .todo-actions { opacity: 1; } }
+
+    /* ── Progress bar ────────────────────────────────────────────────────── */
+    #progress-fill {
+      transition: width 0.55s ease;
+      transform-origin: left center;
+    }
+    #progress-fill.wiggle { animation: barWiggle 0.55s ease; }
+    @keyframes barWiggle {
+      0%   { transform: scaleY(1); }
+      20%  { transform: scaleY(1.9); }
+      45%  { transform: scaleY(0.65); }
+      70%  { transform: scaleY(1.5); }
+      100% { transform: scaleY(1); }
+    }
+
+    /* ── Chaos button ────────────────────────────────────────────────────── */
+    #chaos-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    #chaos-btn:hover { transform: scale(1.1) rotate(18deg); box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
+
+    /* ── Modal ───────────────────────────────────────────────────────────── */
+    #modal-backdrop {
+      background: rgba(0,0,0,0.38);
+      backdrop-filter: blur(3px);
+    }
+
+    /* ── Theme switcher dots ─────────────────────────────────────────────── */
+    .theme-dot {
+      width: 26px; height: 26px;
+      border-radius: 9999px;
+      border: 2px solid transparent;
+      cursor: pointer; flex-shrink: 0;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .theme-dot:hover  { transform: scale(1.15); }
+    .theme-dot.active { box-shadow: 0 0 0 2px var(--bg-page), 0 0 0 4px var(--accent); }
+  </style>
+</head>
+<body data-theme="cream" class="min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- Auth guard — runs before any render -->
+  <script>
+    if (!localStorage.getItem('checkmark-token')) {
+      window.location.replace('login.html');
+    }
+  </script>
+
+  <!-- ─── Nav ─── -->
+  <nav class="sticky top-0 z-40 flex items-center justify-between px-6 sm:px-8 py-4 backdrop-blur-sm"
+       style="background-color:var(--bg-page);border-bottom:1px solid var(--border);">
+
+    <a href="index.html" class="font-black text-lg tracking-tight" style="color:var(--text-primary);">✓ Checkmark</a>
+
+    <div class="flex items-center gap-4">
+      <button id="logout-btn" class="site-link text-sm font-medium">Log out</button>
+
+      <!-- Theme switcher -->
+      <div class="relative">
+        <button id="theme-btn" class="flex items-center justify-center w-9 h-9 rounded-full"
+                style="background-color:var(--bg-subtle);" title="Change theme" aria-label="Change theme">
+          <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+            <path d="M10 10 L10 2 A8 8 0 0 1 18 10 Z" fill="#f97316"/>
+            <path d="M10 10 L18 10 A8 8 0 0 1 10 18 Z" fill="#7c3aed"/>
+            <path d="M10 10 L10 18 A8 8 0 0 1 2 10 Z"  fill="#e11d48"/>
+            <path d="M10 10 L2 10 A8 8 0 0 1 10 2 Z"   fill="#16a34a"/>
+            <circle cx="10" cy="10" r="8" stroke="white" stroke-width="0.8" fill="none" opacity="0.25"/>
+          </svg>
+        </button>
+        <div id="theme-popover"
+             style="display:none;position:absolute;right:0;top:44px;background-color:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:8px 10px;gap:8px;align-items:center;z-index:50;box-shadow:0 8px 24px rgba(0,0,0,0.10);">
+          <button class="theme-dot" data-theme="cream"  style="background:#f97316;" title="Cream"></button>
+          <button class="theme-dot" data-theme="purple" style="background:#7c3aed;" title="Purple"></button>
+          <button class="theme-dot" data-theme="sky"    style="background:#0891b2;" title="Sky"></button>
+          <button class="theme-dot" data-theme="rose"   style="background:#e11d48;" title="Rose"></button>
+          <button class="theme-dot" data-theme="forest" style="background:#16a34a;" title="Forest"></button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ─── Progress bar ─── -->
+  <div class="px-6 sm:px-8 pt-5 pb-4">
+    <div class="max-w-2xl mx-auto">
+      <div class="flex items-center justify-between mb-2">
+        <span id="progress-label" class="text-sm" style="color:var(--text-muted);">Loading…</span>
+        <span id="progress-pct"   class="text-sm font-bold" style="color:var(--accent);"></span>
+      </div>
+      <div class="h-2.5 rounded-full overflow-hidden" style="background:var(--border);">
+        <div id="progress-fill" class="h-2.5 rounded-full" style="background:var(--accent);width:0%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Main content ─── -->
+  <main class="flex-1 px-6 sm:px-8 pb-32">
+    <div class="max-w-2xl mx-auto">
+
+      <!-- Toolbar: filter pills + add button -->
+      <div class="flex items-center justify-between gap-4 mb-5 flex-wrap">
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="low">Low</button>
+          <button class="filter-btn" data-filter="medium">Medium</button>
+          <button class="filter-btn" data-filter="high">High</button>
+        </div>
+        <button id="add-btn"
+                class="btn-accent flex items-center gap-1.5 px-5 py-2.5 rounded-full text-sm flex-shrink-0">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" d="M6 1v10M1 6h10"/>
+          </svg>
+          Add todo
+        </button>
+      </div>
+
+      <!-- Todo list (populated by app.js) -->
+      <div id="todo-list" class="space-y-2.5"></div>
+
+      <!-- Empty state -->
+      <div id="empty-state" class="hidden text-center py-20">
+        <div id="empty-emoji" class="text-5xl mb-4">✨</div>
+        <p id="empty-title" class="text-xl font-bold mb-2" style="color:var(--text-primary);">All clear!</p>
+        <p id="empty-sub"   class="text-sm mb-6"           style="color:var(--text-muted);">Add a todo to start winning the day.</p>
+        <button id="empty-add-btn"
+                class="btn-accent inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm">
+          + Add your first todo
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- ─── Chaos / Undo buttons (fixed bottom-right) ─── -->
+  <div class="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-30">
+    <button id="undo-chaos-btn"
+            class="hidden btn-outline text-sm px-4 py-2 rounded-full shadow-lg"
+            style="background:var(--bg-card);">
+      ↩ Undo chaos
+    </button>
+    <button id="chaos-btn"
+            class="w-14 h-14 rounded-full text-2xl flex items-center justify-center shadow-xl"
+            style="background:var(--bg-card);border:1.5px solid var(--border);"
+            title="Chaos mode 🎲">
+      🎲
+    </button>
+  </div>
+
+  <!-- ─── Add / Edit modal ─── -->
+  <div id="modal-backdrop"
+       class="fixed inset-0 z-50 hidden items-center justify-center p-4">
+    <div id="modal"
+         class="w-full max-w-md rounded-2xl shadow-2xl"
+         style="background:var(--bg-card);border:1px solid var(--border);padding:1.75rem;">
+
+      <div class="flex items-center justify-between mb-6">
+        <h2 id="modal-heading" class="text-xl font-black" style="color:var(--text-primary);">Add todo</h2>
+        <button id="modal-close"
+                class="w-8 h-8 flex items-center justify-center rounded-full text-2xl leading-none"
+                style="color:var(--text-muted);" aria-label="Close">×</button>
+      </div>
+
+      <form id="todo-form" novalidate class="space-y-4">
+
+        <div>
+          <label for="form-title" class="block text-sm font-medium mb-1" style="color:var(--text-primary);">Title *</label>
+          <input id="form-title" name="title" type="text" autocomplete="off"
+                 placeholder="What needs doing?" required class="form-input" />
+        </div>
+
+        <div>
+          <label for="form-desc" class="block text-sm font-medium mb-1" style="color:var(--text-primary);">Description</label>
+          <input id="form-desc" name="description" type="text" autocomplete="off"
+                 placeholder="Optional details…" class="form-input" />
+        </div>
+
+        <div>
+          <label for="form-priority" class="block text-sm font-medium mb-1" style="color:var(--text-primary);">Priority</label>
+          <select id="form-priority" name="priority" class="form-input">
+            <option value="low">🟢 Low</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="high">🔴 High</option>
+          </select>
+        </div>
+
+        <p id="form-error" class="text-sm hidden" style="color:var(--accent);"></p>
+
+        <div class="flex gap-3 pt-1">
+          <button type="submit"   class="btn-accent  flex-1 py-3 rounded-full text-sm">Save</button>
+          <button type="button" id="form-cancel"
+                  class="btn-outline flex-1 py-3 rounded-full text-sm">Cancel</button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // ── Theme system (shared across all pages) ────────────────────────────
+    function setTheme(name) {
+      document.body.setAttribute('data-theme', name);
+      localStorage.setItem('checkmark-theme', name);
+      document.querySelectorAll('.theme-dot').forEach(function (dot) {
+        dot.classList.toggle('active', dot.dataset.theme === name);
+      });
+    }
+    setTheme(localStorage.getItem('checkmark-theme') || 'cream');
+
+    var themeBtn     = document.getElementById('theme-btn');
+    var themePopover = document.getElementById('theme-popover');
+
+    themeBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var isOpen = themePopover.style.display === 'flex';
+      themePopover.style.display = isOpen ? 'none' : 'flex';
+    });
+    document.addEventListener('click', function () {
+      themePopover.style.display = 'none';
+    });
+    document.querySelectorAll('.theme-dot').forEach(function (dot) {
+      dot.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setTheme(dot.dataset.theme);
+      });
+    });
+  </script>
+</body>
+</html>
