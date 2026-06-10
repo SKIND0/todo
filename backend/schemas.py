@@ -71,7 +71,8 @@ class TodoResponse(BaseModel):
     title:       str
     description: Optional[str]
     priority:    PriorityEnum
-    completed:   bool
-    created_at:  datetime
+    completed:    bool
+    created_at:   datetime
+    completed_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}

@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import List, Optional
 from sqlalchemy.orm import Session
 
@@ -57,6 +58,7 @@ def complete_todo(db: Session, todo_id: int, user_id: int) -> Optional[Todo]:
     if not todo:
         return None
     todo.completed = True
+    todo.completed_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(todo)
     return todo
@@ -67,6 +69,7 @@ def uncomplete_todo(db: Session, todo_id: int, user_id: int) -> Optional[Todo]:
     if not todo:
         return None
     todo.completed = False
+    todo.completed_at = None
     db.commit()
     db.refresh(todo)
     return todo

@@ -90,6 +90,7 @@ function getFiltered() {
 function renderAll() {
   renderTodos();
   updateProgressBar();
+  updateStatsPanel();
 }
 
 function renderTodos() {
@@ -152,10 +153,19 @@ function updateHourHint() {
     `This hour loves <span style="color:${color};font-weight:800;">${letter.toUpperCase()}</span>'s · ${formatHourLabel(h)}`;
 }
 
+function titleHasWords(title) {
+  return /[a-zA-Z]/.test(title);
+}
+
+function isEmojiOnlyTitle(title) {
+  const t = String(title ?? '').trim();
+  return t.length > 0 && !titleHasWords(t);
+}
+
 function buildTitleHTML(title, highlight = false) {
-  const foodEmoji = foodEmojiFor(title);
-  const foodSpan  = foodEmoji
-    ? `<span class="food-emoji" title="Food detected!">${foodEmoji}</span>`
+  const food = foodEmojiFor(title);
+  const foodSpan = food
+    ? `<span class="food-emoji" title="Food detected!">${food}</span>`
     : '';
 
   if (!highlight) return esc(title) + foodSpan;
@@ -233,6 +243,100 @@ function hasActionVerb(title) {
   });
 }
 
+function parseTodoDate(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function formatDateTime(iso) {
+  const d = parseTodoDate(iso);
+  if (!d) return '';
+  return d.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+  });
+}
+
+function formatDateLong(iso) {
+  const d = parseTodoDate(iso);
+  if (!d) return '';
+  return d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function formatDateKey(iso) {
+  const d = parseTodoDate(iso);
+  if (!d) return 'unknown';
+  return d.toLocaleDateString('en-CA');
+}
+
+function isToday(iso) {
+  const d = parseTodoDate(iso);
+  return d && d.toDateString() === new Date().toDateString();
+}
+
+function todoMetaHTML(todo) {
+  const created = formatDateTime(todo.created_at);
+  if (!todo.completed) {
+    return created ? `<p class="todo-meta truncate">Added ${created}</p>` : '';
+  }
+  const done = formatDateTime(todo.completed_at);
+  if (done) {
+    return `<p class="todo-meta truncate">Added ${created || '?'} · Done ${done}</p>`;
+  }
+  return created ? `<p class="todo-meta truncate">Added ${created}</p>` : '';
+}
+
+function computeStats() {
+  const todos = state.todos;
+  const open  = todos.filter(t => !t.completed);
+  const done  = todos.filter(t => t.completed);
+  const prio  = { high: 0, medium: 0, low: 0 };
+  const openP = { high: 0, medium: 0, low: 0 };
+
+  todos.forEach(t => {
+    prio[t.priority]++;
+    if (!t.completed) openP[t.priority]++;
+  });
+
+  return {
+    total:       todos.length,
+    open:        open.length,
+    done:        done.length,
+    pct:         todos.length ? Math.round((done.length / todos.length) * 100) : 0,
+    prio,
+    openP,
+    addedToday:  todos.filter(t => isToday(t.created_at)).length,
+    doneToday:   done.filter(t => isToday(t.completed_at)).length,
+  };
+}
+
+function updateStatsPanel() {
+  const panel  = document.getElementById('stats-panel');
+  const detail = document.getElementById('stats-detail');
+  if (!panel) return;
+
+  const s = computeStats();
+  const chips = [
+    { value: s.open,        label: 'Open' },
+    { value: s.done,        label: 'Done' },
+    { value: s.pct + '%',   label: 'Complete' },
+    { value: s.addedToday,  label: 'Added today' },
+    { value: s.doneToday,   label: 'Done today' },
+    { value: s.openP.high,  label: 'Open high' },
+    { value: s.openP.medium, label: 'Open med' },
+    { value: s.openP.low,   label: 'Open low' },
+  ];
+
+  panel.innerHTML = chips.map(c =>
+    `<div class="stat-chip"><div class="stat-value">${c.value}</div><div class="stat-label">${c.label}</div></div>`
+  ).join('');
+
+  if (detail) {
+    detail.textContent =
+      `High ${s.prio.high} · Medium ${s.prio.medium} · Low ${s.prio.low} — ${s.total} total`;
+  }
+}
+
 function jumpCard(todoId) {
   requestAnimationFrame(() => {
     const card = document.querySelector(`.todo-card[data-id="${todoId}"]`);
@@ -282,6 +386,7 @@ function todoCardHTML(todo) {
 
       <div class="flex-1 min-w-0">
         <p class="todo-title text-sm font-medium truncate" style="color:var(--text-primary);${titleStyle}">${titleHTML}</p>
+        ${todoMetaHTML(todo)}
         ${descHTML}
       </div>
 
@@ -467,6 +572,7 @@ async function handleToggleComplete(id) {
 
   if (todo.completed) {
     todo.completed = false;
+    todo.completed_at = null;
     renderAll();
 
     const result = await apiUncompleteTodo(id);
@@ -474,11 +580,15 @@ async function handleToggleComplete(id) {
       todo.completed = true;
       renderAll();
       showToast('Could not undo complete.', 'error');
+      return;
     }
+    Object.assign(todo, result);
+    renderAll();
     return;
   }
 
   todo.completed = true;
+  todo.completed_at = new Date().toISOString();
   renderAll();
 
   const checkboxEl = document.querySelector(`.checkbox-btn[data-id="${id}"]`);
@@ -487,10 +597,13 @@ async function handleToggleComplete(id) {
   const result = await apiCompleteTodo(id);
   if (!result) {
     todo.completed = false;
+    todo.completed_at = null;
     renderAll();
     showToast('Could not mark todo complete.', 'error');
     return;
   }
+  Object.assign(todo, result);
+  renderAll();
 
   const allDone = state.todos.length > 0 && state.todos.every(t => t.completed);
   if (allDone) setTimeout(celebrate, 350);
@@ -699,6 +812,21 @@ function exitChaos() {
 }
 
 // ── PDF export ────────────────────────────────────────────────────────────────
+const THEME_PDF = {
+  cream:  { accent: [249, 115, 22],  light: [255, 247, 237], page: [255, 251, 245] },
+  purple: { accent: [124, 58, 237],  light: [237, 233, 254], page: [247, 245, 255] },
+  sky:    { accent: [8, 145, 178],   light: [207, 250, 254], page: [240, 250, 251] },
+  rose:   { accent: [225, 29, 72],   light: [255, 228, 230], page: [255, 245, 247] },
+  forest: { accent: [22, 163, 74],   light: [220, 252, 231], page: [243, 250, 243] },
+  dark:   { accent: [129, 140, 248], light: [30, 27, 75],     page: [26, 29, 39] },
+};
+
+const PDF_PRIO = {
+  high:   { fill: [255, 240, 230], text: [194, 65, 12],  label: 'HIGH' },
+  medium: { fill: [254, 249, 231], text: [180, 83, 9],   label: 'MED' },
+  low:    { fill: [240, 253, 244], text: [22, 101, 52],  label: 'LOW' },
+};
+
 function pdfSafe(str) {
   return String(str ?? '')
     .normalize('NFKD')
@@ -706,19 +834,34 @@ function pdfSafe(str) {
     .trim();
 }
 
-function foodTagFor(title) {
-  const lower = title.toLowerCase();
-  for (const word of Object.keys(FOOD_EMOJI)) {
-    if (lower.includes(word)) return word;
-  }
-  return null;
+function pdfTitleLine(title) {
+  if (isEmojiOnlyTitle(title)) return String(title).trim();
+  return pdfSafe(title) || '(untitled)';
 }
 
-const PDF_PRIO = {
-  high:   { fill: [255, 240, 230], text: [194, 65, 12],  label: 'HIGH' },
-  medium: { fill: [254, 249, 231], text: [180, 83, 9],   label: 'MED' },
-  low:    { fill: [240, 253, 244], text: [22, 101, 52],  label: 'LOW' },
-};
+function pdfMetaLine(todo) {
+  const created = pdfSafe(formatDateTime(todo.created_at));
+  if (!todo.completed) {
+    return created ? `Added ${created}` : '';
+  }
+  const done = pdfSafe(formatDateTime(todo.completed_at));
+  return done
+    ? `Added ${created || '?'}  |  Done ${done}`
+    : (created ? `Added ${created}` : '');
+}
+
+function groupTodosByDate(todos, dateField, fallbackField) {
+  const map = {};
+  todos.forEach(todo => {
+    const iso  = todo[dateField] || todo[fallbackField];
+    const key  = formatDateKey(iso);
+    if (!map[key]) map[key] = { label: formatDateLong(iso), items: [] };
+    map[key].items.push(todo);
+  });
+  return Object.keys(map)
+    .sort((a, b) => b.localeCompare(a))
+    .map(k => map[k]);
+}
 
 function exportTodosPDF() {
   if (!window.jspdf) {
@@ -730,6 +873,9 @@ function exportTodosPDF() {
     return;
   }
 
+  const themeName = document.body.getAttribute('data-theme') || 'cream';
+  const theme     = THEME_PDF[themeName] || THEME_PDF.cream;
+  const stats     = computeStats();
   const { jsPDF } = window.jspdf;
   const doc       = new jsPDF({ unit: 'pt', format: 'a4' });
   const pageW     = doc.internal.pageSize.getWidth();
@@ -737,38 +883,39 @@ function exportTodosPDF() {
   const contentW  = pageW - margin * 2;
   let y           = 0;
 
-  const open      = state.todos.filter(t => !t.completed);
-  const done      = state.todos.filter(t => t.completed);
-  const { letter, color } = getHourHighlight();
-  const hourHint  = `Hourly letter: ${letter.toUpperCase()}`;
+  const openGroups = groupTodosByDate(
+    state.todos.filter(t => !t.completed), 'created_at', 'created_at'
+  );
+  const doneGroups = groupTodosByDate(
+    state.todos.filter(t => t.completed), 'completed_at', 'created_at'
+  );
 
   function newPageIf(need) {
-    if (y + need > 780) {
-      doc.addPage();
+    if (y + need > 770) {
       drawPageFooter();
+      doc.addPage();
       y = margin;
     }
   }
 
   function drawPageFooter() {
-    const n    = doc.internal.getNumberOfPages();
-    const foot = `Checkmark  |  ${hourHint}  |  Page ${n}`;
+    const n = doc.internal.getNumberOfPages();
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(140);
-    doc.text(foot, margin, 820);
-    doc.setDrawColor(220);
+    doc.text(`Checkmark  |  Exported ${pdfSafe(new Date().toLocaleString())}  |  Page ${n}`, margin, 820);
+    doc.setDrawColor(210);
     doc.line(margin, 808, pageW - margin, 808);
   }
 
   function drawCheckbox(x, baseline, checked) {
     const size = 11;
     const top  = baseline - size + 1;
-    doc.setDrawColor(checked ? 22 : 120, checked ? 163 : 120, checked ? 74 : 120);
+    const c    = checked ? theme.accent : [120, 120, 120];
+    doc.setDrawColor(...c);
     doc.setLineWidth(0.9);
     doc.roundedRect(x, top, size, size, 1.5, 1.5);
     if (checked) {
-      doc.setDrawColor(22, 163, 74);
       doc.setLineWidth(1.4);
       doc.line(x + 2.5, top + 5.5, x + 4.5, top + 7.8);
       doc.line(x + 4.5, top + 7.8, x + 8.5, top + 3);
@@ -776,12 +923,11 @@ function exportTodosPDF() {
   }
 
   function drawPriorityPill(x, baseline, priority) {
-    const p    = PDF_PRIO[priority] || PDF_PRIO.low;
-    const w    = 34;
-    const h    = 14;
-    const top  = baseline - h + 2;
+    const p   = PDF_PRIO[priority] || PDF_PRIO.low;
+    const w   = 34;
+    const h   = 14;
+    const top = baseline - h + 2;
     doc.setFillColor(...p.fill);
-    doc.setDrawColor(...p.fill);
     doc.roundedRect(x, top, w, h, 3, 3, 'F');
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(7);
@@ -790,102 +936,127 @@ function exportTodosPDF() {
     return w + 8;
   }
 
-  function drawSectionTitle(title) {
-    newPageIf(36);
+  function drawHeading(text, size) {
+    newPageIf(28);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(11);
-    doc.setTextColor(50);
-    doc.text(title, margin, y);
-    y += 6;
-    doc.setDrawColor(210);
-    doc.setLineWidth(0.5);
-    doc.line(margin, y, pageW - margin, y);
-    y += 18;
+    doc.setFontSize(size);
+    doc.setTextColor(40);
+    doc.text(text, margin, y);
+    y += size === 13 ? 20 : 14;
+  }
+
+  function drawDateHeader(label) {
+    newPageIf(24);
+    doc.setFillColor(...theme.light);
+    doc.roundedRect(margin, y - 12, contentW, 20, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.setTextColor(...theme.accent);
+    doc.text(pdfSafe(label), margin + 10, y + 2);
+    y += 22;
   }
 
   function drawTodoRow(todo) {
-    const title    = pdfSafe(todo.title);
-    const desc     = pdfSafe(todo.description || '');
-    const food     = foodTagFor(todo.title);
-    const titleLine = food ? `${title}  [${food}]` : title;
-    const wrapped  = doc.splitTextToSize(titleLine, contentW - 62);
-    const rowH     = 22 + (desc ? 14 + doc.splitTextToSize(desc, contentW - 20).length * 11 : 0)
-                   + (wrapped.length - 1) * 13;
+    const titleLine = pdfTitleLine(todo.title);
+    const desc      = pdfSafe(todo.description || '');
+    const meta      = pdfMetaLine(todo);
+    const wrapped   = doc.splitTextToSize(titleLine, contentW - 62);
+    const metaLines = meta ? doc.splitTextToSize(meta, contentW - 62) : [];
+    const descLines = desc ? doc.splitTextToSize(desc, contentW - 20) : [];
+    const rowH      = 20 + wrapped.length * 13 + metaLines.length * 10
+                    + descLines.length * 11 + 12;
 
     newPageIf(rowH);
 
     const baseline = y;
     drawCheckbox(margin, baseline, todo.completed);
-    const pillX = margin + 20;
-    const textX = pillX + drawPriorityPill(pillX, baseline, todo.priority);
+    const textX = margin + 20 + drawPriorityPill(margin + 20, baseline, todo.priority);
 
     doc.setFont('helvetica', todo.completed ? 'normal' : 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(todo.completed ? 120 : 30);
+    doc.setTextColor(todo.completed ? 110 : 30);
+    doc.text(wrapped, textX, y);
 
-    if (todo.completed) {
-      const tw = doc.getTextWidth(wrapped[0] || titleLine);
-      doc.text(wrapped, textX, y);
-      doc.setDrawColor(170);
-      doc.setLineWidth(0.6);
+    if (todo.completed && wrapped[0]) {
+      const tw = doc.getTextWidth(wrapped[0]);
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.5);
       doc.line(textX, y - 3, textX + Math.min(tw, contentW - 62), y - 3);
-    } else {
-      doc.text(wrapped, textX, y);
     }
-    y += wrapped.length * 13 + 4;
+    y += wrapped.length * 13 + 2;
 
-    if (desc) {
+    if (metaLines.length) {
       doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(110);
-      const descLines = doc.splitTextToSize(desc, contentW - 20);
-      doc.text(descLines, margin + 20, y);
-      y += descLines.length * 11 + 4;
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      doc.text(metaLines, textX, y);
+      y += metaLines.length * 10 + 2;
     }
 
-    y += 10;
+    if (descLines.length) {
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text(descLines, margin + 20, y);
+      y += descLines.length * 11 + 2;
+    }
+
+    y += 8;
   }
 
-  // ── Header band ─────────────────────────────────────────────────────────────
-  doc.setFillColor(249, 115, 22);
-  doc.rect(0, 0, pageW, 72, 'F');
+  // Header
+  doc.setFillColor(...theme.accent);
+  doc.rect(0, 0, pageW, 78, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   doc.setTextColor(255, 255, 255);
-  doc.text('Checkmark', margin, 38);
+  doc.text('Checkmark', margin, 40);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(11);
-  doc.text('My Todos', margin, 56);
-
+  doc.text('My Todos', margin, 58);
   doc.setFontSize(10);
-  doc.text(new Date().toLocaleString(), pageW - margin, 38, { align: 'right' });
-  doc.text(`${done.length} of ${state.todos.length} complete`, pageW - margin, 54, { align: 'right' });
+  doc.text(pdfSafe(new Date().toLocaleString()), pageW - margin, 40, { align: 'right' });
+  doc.text(`${stats.done} of ${stats.total} complete (${stats.pct}%)`, pageW - margin, 58, { align: 'right' });
 
-  y = 96;
+  y = 100;
 
-  // ── Summary strip ───────────────────────────────────────────────────────────
-  doc.setFillColor(255, 247, 237);
-  doc.roundedRect(margin, y - 14, contentW, 28, 4, 4, 'F');
+  // Stats grid
+  doc.setFillColor(...theme.page);
+  doc.roundedRect(margin, y - 12, contentW, 54, 5, 5, 'F');
+  const statRow = [
+    `Open: ${stats.open}`,
+    `Done: ${stats.done}`,
+    `Today +${stats.addedToday}`,
+    `Done today ${stats.doneToday}`,
+    `High ${stats.prio.high} / Med ${stats.prio.medium} / Low ${stats.prio.low}`,
+    `Open high ${stats.openP.high} / med ${stats.openP.medium} / low ${stats.openP.low}`,
+  ];
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(90);
-  doc.text(`Open: ${open.length}   |   Done: ${done.length}   |   ${hourHint}`, margin + 12, y + 2);
-  y += 32;
+  doc.setTextColor(70);
+  statRow.forEach((line, i) => {
+    doc.text(pdfSafe(line), margin + 12, y + i * 11);
+  });
+  y += 58;
 
-  if (open.length) {
-    drawSectionTitle(`Open (${open.length})`);
-    open.forEach(drawTodoRow);
+  if (openGroups.length) {
+    drawHeading(`Open (${stats.open})`, 13);
+    openGroups.forEach(group => {
+      drawDateHeader(`Added ${group.label}`);
+      group.items.forEach(drawTodoRow);
+    });
   }
 
-  if (done.length) {
-    drawSectionTitle(`Completed (${done.length})`);
-    done.forEach(drawTodoRow);
+  if (doneGroups.length) {
+    drawHeading(`Completed (${stats.done})`, 13);
+    doneGroups.forEach(group => {
+      drawDateHeader(`Completed ${group.label}`);
+      group.items.forEach(drawTodoRow);
+    });
   }
 
   drawPageFooter();
 
-  const date = new Date().toISOString().slice(0, 10);
-  doc.save(`checkmark-todos-${date}.pdf`);
+  doc.save(`checkmark-todos-${new Date().toISOString().slice(0, 10)}.pdf`);
   showToast('PDF downloaded!');
 }
 

@@ -18,6 +18,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
+from sqlalchemy import text
+
 from database import Base, engine
 from routers import auth, todos
 
@@ -29,6 +31,10 @@ FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    with engine.begin() as conn:
+        conn.execute(text(
+            "ALTER TABLE todos ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ"
+        ))
     yield
 
 
