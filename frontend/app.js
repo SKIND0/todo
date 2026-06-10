@@ -133,6 +133,19 @@ function getHourHighlight() {
   return HOUR_HIGHLIGHTS[new Date().getHours()];
 }
 
+function formatHourLabel(h) {
+  return (h % 12 || 12) + (h >= 12 ? 'pm' : 'am');
+}
+
+function updateHourHint() {
+  const el = document.getElementById('hour-hint');
+  if (!el) return;
+  const h = new Date().getHours();
+  const { letter, color } = getHourHighlight();
+  el.innerHTML =
+    `This hour loves <span style="color:${color};font-weight:800;">${letter.toUpperCase()}</span>'s · ${formatHourLabel(h)}`;
+}
+
 function buildTitleHTML(title, highlight = false) {
   const foodEmoji = foodEmojiFor(title);
   const foodSpan  = foodEmoji
@@ -672,6 +685,68 @@ function exitChaos() {
   clearChaosVisuals();
 }
 
+// ── PDF export ────────────────────────────────────────────────────────────────
+function exportTodosPDF() {
+  if (!window.jspdf) {
+    showToast('PDF library not loaded.', 'error');
+    return;
+  }
+  if (!state.todos.length) {
+    showToast('Nothing to export yet.', 'error');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc       = new jsPDF({ unit: 'pt', format: 'a4' });
+  const margin    = 44;
+  let y           = margin;
+
+  const done = state.todos.filter(t => t.completed).length;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(20);
+  doc.text('Checkmark — My Todos', margin, y);
+  y += 24;
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(110);
+  doc.text(`${new Date().toLocaleString()} · ${done} of ${state.todos.length} complete`, margin, y);
+  y += 30;
+
+  doc.setTextColor(30);
+  doc.setFontSize(11);
+
+  state.todos.forEach(todo => {
+    if (y > 760) {
+      doc.addPage();
+      y = margin;
+    }
+
+    const mark = todo.completed ? '✓' : '○';
+    const line = `${mark}  ${todo.priority.toUpperCase()} — ${todo.title}`;
+    doc.setFont('helvetica', todo.completed ? 'normal' : 'bold');
+    doc.text(line, margin, y);
+    y += 18;
+
+    if (todo.description) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(90);
+      const wrapped = doc.splitTextToSize(todo.description, 500);
+      doc.text(wrapped, margin + 14, y);
+      y += wrapped.length * 13 + 2;
+      doc.setFontSize(11);
+      doc.setTextColor(30);
+    }
+    y += 8;
+  });
+
+  const date = new Date().toISOString().slice(0, 10);
+  doc.save(`checkmark-todos-${date}.pdf`);
+  showToast('PDF downloaded!');
+}
+
 // ── Toast notification ────────────────────────────────────────────────────────
 function showToast(msg, type = 'info') {
   const el = document.createElement('div');
@@ -734,6 +809,9 @@ async function init() {
   document.getElementById('undo-chaos-btn')
     .addEventListener('click', undoChaos);
 
+  document.getElementById('export-pdf-btn')
+    .addEventListener('click', exportTodosPDF);
+
   document.getElementById('logout-btn')
     .addEventListener('click', handleLogout);
 
@@ -746,6 +824,9 @@ async function init() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeModal();
   });
+
+  updateHourHint();
+  setInterval(updateHourHint, 60_000);
 
   // Fetch todos and render
   await loadTodos();
