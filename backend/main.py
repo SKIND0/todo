@@ -14,10 +14,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from database import Base, engine
 from routers import auth, todos
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 # ── Create tables on startup ──────────────────────────────────────────────────
 # In production you'd use Alembic migrations; for this app's scope, create_all
@@ -60,7 +64,34 @@ app.include_router(auth.router)
 app.include_router(todos.router)
 
 
-@app.get("/", tags=["health"])
+@app.get("/health", tags=["health"])
 def health():
     """Health check — Railway and monitoring tools ping this."""
     return {"status": "ok", "app": "Checkmark API"}
+
+
+# ── Frontend (static HTML/JS) ─────────────────────────────────────────────────
+# Served from the same service so one public Railway URL works for the whole app.
+# Requires the backend service root directory to be the repo root (not backend/).
+_PAGE_ROUTES = {
+    "/": "index.html",
+    "/login": "login.html",
+    "/register": "register.html",
+    "/blueprint": "blueprint.html",
+    "/app": "app.html",
+}
+
+if FRONTEND_DIR.is_dir():
+    def _page(route: str, filename: str):
+        @app.get(route, include_in_schema=False)
+        def handler():
+            return FileResponse(FRONTEND_DIR / filename)
+
+    for _route, _file in _PAGE_ROUTES.items():
+        _page(_route, _file)
+
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+else:
+    @app.get("/", tags=["health"])
+    def root_health():
+        return {"status": "ok", "app": "Checkmark API"}

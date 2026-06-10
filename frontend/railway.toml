@@ -2,6 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "npm start"
+startCommand = "npx serve . -l tcp://0.0.0.0:$PORT"
 healthcheckPath = "/"
 restartPolicyType = "ON_FAILURE"
