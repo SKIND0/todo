@@ -3,8 +3,11 @@ Checkmark — FastAPI backend
 Run locally:  uvicorn main:app --reload          (from backend/ directory)
 Railway:      start command → uvicorn main:app --host 0.0.0.0 --port $PORT
 """
+from pathlib import Path
+
 from dotenv import load_dotenv
-load_dotenv()
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 import os
 from contextlib import asynccontextmanager

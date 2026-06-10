@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
-load_dotenv()
+
+# Load repo-root .env locally; Railway injects vars directly.
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 import os
 from sqlalchemy import create_engine

@@ -22,6 +22,12 @@ if (localStorage.getItem('checkmark-token')) {
   window.location.replace('/app.html');
 }
 
+// Google OAuth lives on the backend, not the static frontend server
+(function () {
+  var link = document.querySelector('a.btn-google');
+  if (link) link.href = API_URL + '/auth/google';
+})();
+
 // ── Login form ────────────────────────────────────────────────────────────────
 document.getElementById('login-form').addEventListener('submit', async function (e) {
   e.preventDefault();
