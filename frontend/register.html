@@ -293,21 +293,7 @@
       });
     });
 
-    // ── Form validation (backend call goes here later) ────────────────────
-    document.getElementById('register-form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var password = document.getElementById('password').value;
-      var confirm  = document.getElementById('confirm-password').value;
-      var errorEl  = document.getElementById('register-error');
-
-      if (password !== confirm) {
-        errorEl.textContent = 'Passwords do not match.';
-        errorEl.classList.remove('hidden');
-        return;
-      }
-      errorEl.classList.add('hidden');
-      // Backend call goes here
-    });
   </script>
+  <script src="register.js"></script>
 </body>
 </html>
