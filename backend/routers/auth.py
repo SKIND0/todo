@@ -30,8 +30,27 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
-# Where to send the user after Google login — frontend origin
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+# Where to send the user after Google login — same origin as the app
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
+
+# Optional override; otherwise built from RAILWAY_PUBLIC_DOMAIN or request headers
+GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "").rstrip("/") or None
+
+
+def _google_redirect_uri(request: Request) -> str:
+    """Google requires HTTPS. Railway terminates TLS at the edge, so
+    request.url_for() alone often produces http:// — which causes mismatch."""
+    if GOOGLE_REDIRECT_URI:
+        return GOOGLE_REDIRECT_URI
+
+    railway_domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN", "").strip()
+    if railway_domain:
+        return f"https://{railway_domain}/auth/google/callback"
+
+    uri = str(request.url_for("google_callback"))
+    if request.headers.get("x-forwarded-proto") == "https":
+        uri = uri.replace("http://", "https://", 1)
+    return uri
 
 # ── Password auth ─────────────────────────────────────────────────────────────
 
@@ -72,8 +91,13 @@ def logout():
 @router.get("/google")
 async def google_login(request: Request):
     """Redirect the user to Google's OAuth consent screen."""
-    redirect_uri = request.url_for("google_callback")
-    return await oauth.google.authorize_redirect(request, str(redirect_uri))
+    if not os.environ.get("GOOGLE_CLIENT_ID") or not os.environ.get("GOOGLE_CLIENT_SECRET"):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google sign-in is not configured yet.",
+        )
+    redirect_uri = _google_redirect_uri(request)
+    return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
 @router.get("/google/callback", name="google_callback")
@@ -104,4 +128,4 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     jwt_token = auth_service.create_access_token(user.id)
 
     # Frontend reads ?token= from the URL and stores it in localStorage
-    return RedirectResponse(url=f"{FRONTEND_URL}/login.html?token={jwt_token}")
+    return RedirectResponse(url=f"{FRONTEND_URL}/login?token={jwt_token}")
