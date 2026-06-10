@@ -112,17 +112,54 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
-// Sparkle style for letter "x" changes every hour (6 rotating styles)
-function xSparkleClass() {
-  return 'x-sparkle x-sparkle-' + (new Date().getHours() % 6);
+// Each hour highlights a different letter + color for ~5s when you save a todo
+// Index = hour (0 = midnight, 13 = 1pm red E's, etc.)
+const HOUR_HIGHLIGHTS = [
+  { letter: 'a', color: '#f97316' }, { letter: 'b', color: '#7c3aed' },
+  { letter: 'c', color: '#0891b2' }, { letter: 'd', color: '#16a34a' },
+  { letter: 'e', color: '#ca8a04' }, { letter: 'f', color: '#db2777' },
+  { letter: 'g', color: '#2563eb' }, { letter: 'h', color: '#0d9488' },
+  { letter: 'i', color: '#9333ea' }, { letter: 'j', color: '#ea580c' },
+  { letter: 'k', color: '#4f46e5' }, { letter: 'l', color: '#059669' },
+  { letter: 'm', color: '#be123c' }, { letter: 'e', color: '#e11d48' },
+  { letter: 'n', color: '#f59e0b' }, { letter: 'o', color: '#8b5cf6' },
+  { letter: 'p', color: '#14b8a6' }, { letter: 'q', color: '#ef4444' },
+  { letter: 'r', color: '#3b82f6' }, { letter: 's', color: '#22c55e' },
+  { letter: 't', color: '#f472b6' }, { letter: 'u', color: '#a855f7' },
+  { letter: 'v', color: '#06b6d4' }, { letter: 'w', color: '#7c3aed' },
+];
+
+function getHourHighlight() {
+  return HOUR_HIGHLIGHTS[new Date().getHours()];
 }
 
-function formatTodoTitle(title) {
-  const escaped = esc(title);
-  const cls = xSparkleClass();
-  return escaped.replace(/x/gi, m =>
-    `<span class="${cls}" aria-hidden="true">${m}</span>`
+function buildTitleHTML(title, highlight = false) {
+  const foodEmoji = foodEmojiFor(title);
+  const foodSpan  = foodEmoji
+    ? `<span class="food-emoji" title="Food detected!">${foodEmoji}</span>`
+    : '';
+
+  if (!highlight) return esc(title) + foodSpan;
+
+  const { letter, color } = getHourHighlight();
+  const safe            = letter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const html            = esc(title).replace(
+    new RegExp(safe, 'gi'),
+    m => `<span class="hour-flash-char" style="color:${color}">${m}</span>`
   );
+  return html + foodSpan;
+}
+
+function flashHourLetter(todoId, title) {
+  const { letter } = getHourHighlight();
+  if (!new RegExp(letter, 'i').test(title)) return;
+
+  requestAnimationFrame(() => {
+    const el = document.querySelector(`.todo-card[data-id="${todoId}"] .todo-title`);
+    if (!el) return;
+    el.innerHTML = buildTitleHTML(title, true);
+    setTimeout(() => { el.innerHTML = buildTitleHTML(title, false); }, 5000);
+  });
 }
 
 const FOOD_EMOJI = {
@@ -177,12 +214,12 @@ function hasActionVerb(title) {
   });
 }
 
-function wiggleCard(todoId) {
+function jumpCard(todoId) {
   requestAnimationFrame(() => {
     const card = document.querySelector(`.todo-card[data-id="${todoId}"]`);
     if (!card) return;
-    card.classList.add('card-wiggle');
-    setTimeout(() => card.classList.remove('card-wiggle'), 2000);
+    card.classList.add('card-jump');
+    setTimeout(() => card.classList.remove('card-jump'), 500);
   });
 }
 
@@ -210,9 +247,7 @@ function todoCardHTML(todo) {
     ? `<p class="text-xs mt-0.5 truncate" style="color:var(--text-muted);${mutedStyle}">${esc(todo.description)}</p>`
     : '';
 
-  const foodEmoji = foodEmojiFor(todo.title);
-  const titleHTML = formatTodoTitle(todo.title) +
-    (foodEmoji ? `<span class="food-emoji" title="Food detected!">${foodEmoji}</span>` : '');
+  const titleHTML = buildTitleHTML(todo.title);
 
   return `
     <div class="todo-card flex items-center gap-3 px-4 py-3.5 rounded-xl"
@@ -228,7 +263,7 @@ function todoCardHTML(todo) {
       </button>
 
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium truncate" style="color:var(--text-primary);${titleStyle}">${titleHTML}</p>
+        <p class="todo-title text-sm font-medium truncate" style="color:var(--text-primary);${titleStyle}">${titleHTML}</p>
         ${descHTML}
       </div>
 
@@ -403,7 +438,9 @@ function checkTitleEffects(title, todoId) {
   const food = foodEmojiFor(title);
   if (food) emojiParade([food, food, food, '😋']);
 
-  if (hasActionVerb(title)) wiggleCard(todoId);
+  flashHourLetter(todoId, title);
+
+  if (hasActionVerb(title)) jumpCard(todoId);
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
