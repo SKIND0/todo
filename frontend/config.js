@@ -1,6 +1,6 @@
 // Production API URL — set this to your Railway backend's public URL (no trailing slash).
 // Find it in Railway → backend service → Settings → Networking → Public domain.
-var PRODUCTION_API_URL = 'https://REPLACE-WITH-YOUR-BACKEND.up.railway.app';
+var PRODUCTION_API_URL = 'https://backend-production-18a7.up.railway.app/';
 
 (function () {
   if (window.CHECKMARK_API_URL) return;
