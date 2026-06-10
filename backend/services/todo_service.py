@@ -62,6 +62,16 @@ def complete_todo(db: Session, todo_id: int, user_id: int) -> Optional[Todo]:
     return todo
 
 
+def uncomplete_todo(db: Session, todo_id: int, user_id: int) -> Optional[Todo]:
+    todo = get_todo(db, todo_id, user_id)
+    if not todo:
+        return None
+    todo.completed = False
+    db.commit()
+    db.refresh(todo)
+    return todo
+
+
 def delete_todo(db: Session, todo_id: int, user_id: int) -> bool:
     todo = get_todo(db, todo_id, user_id)
     if not todo:

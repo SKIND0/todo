@@ -6,20 +6,20 @@
 const API_URL = window.CHECKMARK_API_URL || 'http://localhost:8000';
 
 // ── Google OAuth token pickup ─────────────────────────────────────────────────
-// After Google OAuth the backend redirects to /login.html?token=...
+// After Google OAuth the backend redirects to /login?token=...
 // Grab the token, store it, and head straight to the app.
 (function () {
   var params = new URLSearchParams(window.location.search);
   var token  = params.get('token');
   if (token) {
     localStorage.setItem('checkmark-token', token);
-    window.location.replace('/app.html');
+    window.location.replace('/app');
   }
 })();
 
 // ── Redirect if already logged in ────────────────────────────────────────────
 if (localStorage.getItem('checkmark-token')) {
-  window.location.replace('/app.html');
+  window.location.replace('/app');
 }
 
 // Google OAuth lives on the backend, not the static frontend server
@@ -57,7 +57,7 @@ document.getElementById('login-form').addEventListener('submit', async function 
     }
 
     localStorage.setItem('checkmark-token', data.access_token);
-    window.location.replace('/app.html');
+    window.location.replace('/app');
 
   } catch (_err) {
     errorEl.textContent = 'Could not reach the server. Please try again.';

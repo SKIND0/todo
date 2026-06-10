@@ -70,6 +70,12 @@ async function apiCompleteTodo(id) {
   return res.json();
 }
 
+async function apiUncompleteTodo(id) {
+  const res = await apiFetch('/todos/' + id + '/uncomplete', { method: 'PATCH' });
+  if (!res || !res.ok) return null;
+  return res.json();
+}
+
 async function apiDeleteTodo(id) {
   const res = await apiFetch('/todos/' + id, { method: 'DELETE' });
   return res && res.ok;
@@ -268,10 +274,9 @@ function todoCardHTML(todo) {
          data-id="${todo.id}">
 
       <button class="checkbox-btn w-5 h-5 rounded flex-shrink-0 flex items-center justify-center"
-              style="${checkboxStyle}${done ? 'cursor:default;' : 'cursor:pointer;'}"
+              style="${checkboxStyle}cursor:pointer;"
               data-id="${todo.id}"
-              aria-label="${done ? 'Completed' : 'Mark complete'}"
-              ${done ? 'disabled' : ''}>
+              aria-label="${done ? 'Mark incomplete' : 'Mark complete'}">
         ${checkIcon}
       </button>
 
@@ -304,8 +309,7 @@ function todoCardHTML(todo) {
 }
 
 function bindCardEvents() {
-  // Checkbox — only active on incomplete todos
-  document.querySelectorAll('.checkbox-btn:not([disabled])').forEach(btn => {
+  document.querySelectorAll('.checkbox-btn').forEach(btn => {
     btn.addEventListener('click', () => handleToggleComplete(+btn.dataset.id));
   });
 
@@ -459,26 +463,35 @@ function checkTitleEffects(title, todoId) {
 // ── Actions ───────────────────────────────────────────────────────────────────
 async function handleToggleComplete(id) {
   const todo = state.todos.find(t => t.id === id);
-  if (!todo || todo.completed) return;
+  if (!todo) return;
 
-  // Optimistic update — render immediately for snappy feel
+  if (todo.completed) {
+    todo.completed = false;
+    renderAll();
+
+    const result = await apiUncompleteTodo(id);
+    if (!result) {
+      todo.completed = true;
+      renderAll();
+      showToast('Could not undo complete.', 'error');
+    }
+    return;
+  }
+
   todo.completed = true;
   renderAll();
 
-  // Sparkle at the checkbox position
   const checkboxEl = document.querySelector(`.checkbox-btn[data-id="${id}"]`);
   if (checkboxEl) sparkle(checkboxEl);
 
   const result = await apiCompleteTodo(id);
   if (!result) {
-    // Revert if API call failed
     todo.completed = false;
     renderAll();
     showToast('Could not mark todo complete.', 'error');
     return;
   }
 
-  // All done? 🎉
   const allDone = state.todos.length > 0 && state.todos.every(t => t.completed);
   if (allDone) setTimeout(celebrate, 350);
 }
@@ -686,6 +699,27 @@ function exitChaos() {
 }
 
 // ── PDF export ────────────────────────────────────────────────────────────────
+function pdfSafe(str) {
+  return String(str ?? '')
+    .normalize('NFKD')
+    .replace(/[^\x20-\x7E]/g, '')
+    .trim();
+}
+
+function foodTagFor(title) {
+  const lower = title.toLowerCase();
+  for (const word of Object.keys(FOOD_EMOJI)) {
+    if (lower.includes(word)) return word;
+  }
+  return null;
+}
+
+const PDF_PRIO = {
+  high:   { fill: [255, 240, 230], text: [194, 65, 12],  label: 'HIGH' },
+  medium: { fill: [254, 249, 231], text: [180, 83, 9],   label: 'MED' },
+  low:    { fill: [240, 253, 244], text: [22, 101, 52],  label: 'LOW' },
+};
+
 function exportTodosPDF() {
   if (!window.jspdf) {
     showToast('PDF library not loaded.', 'error');
@@ -698,49 +732,157 @@ function exportTodosPDF() {
 
   const { jsPDF } = window.jspdf;
   const doc       = new jsPDF({ unit: 'pt', format: 'a4' });
-  const margin    = 44;
-  let y           = margin;
+  const pageW     = doc.internal.pageSize.getWidth();
+  const margin    = 48;
+  const contentW  = pageW - margin * 2;
+  let y           = 0;
 
-  const done = state.todos.filter(t => t.completed).length;
+  const open      = state.todos.filter(t => !t.completed);
+  const done      = state.todos.filter(t => t.completed);
+  const { letter, color } = getHourHighlight();
+  const hourHint  = `Hourly letter: ${letter.toUpperCase()}`;
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.text('Checkmark — My Todos', margin, y);
-  y += 24;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(110);
-  doc.text(`${new Date().toLocaleString()} · ${done} of ${state.todos.length} complete`, margin, y);
-  y += 30;
-
-  doc.setTextColor(30);
-  doc.setFontSize(11);
-
-  state.todos.forEach(todo => {
-    if (y > 760) {
+  function newPageIf(need) {
+    if (y + need > 780) {
       doc.addPage();
+      drawPageFooter();
       y = margin;
     }
+  }
 
-    const mark = todo.completed ? '✓' : '○';
-    const line = `${mark}  ${todo.priority.toUpperCase()} — ${todo.title}`;
-    doc.setFont('helvetica', todo.completed ? 'normal' : 'bold');
-    doc.text(line, margin, y);
+  function drawPageFooter() {
+    const n    = doc.internal.getNumberOfPages();
+    const foot = `Checkmark  |  ${hourHint}  |  Page ${n}`;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(140);
+    doc.text(foot, margin, 820);
+    doc.setDrawColor(220);
+    doc.line(margin, 808, pageW - margin, 808);
+  }
+
+  function drawCheckbox(x, baseline, checked) {
+    const size = 11;
+    const top  = baseline - size + 1;
+    doc.setDrawColor(checked ? 22 : 120, checked ? 163 : 120, checked ? 74 : 120);
+    doc.setLineWidth(0.9);
+    doc.roundedRect(x, top, size, size, 1.5, 1.5);
+    if (checked) {
+      doc.setDrawColor(22, 163, 74);
+      doc.setLineWidth(1.4);
+      doc.line(x + 2.5, top + 5.5, x + 4.5, top + 7.8);
+      doc.line(x + 4.5, top + 7.8, x + 8.5, top + 3);
+    }
+  }
+
+  function drawPriorityPill(x, baseline, priority) {
+    const p    = PDF_PRIO[priority] || PDF_PRIO.low;
+    const w    = 34;
+    const h    = 14;
+    const top  = baseline - h + 2;
+    doc.setFillColor(...p.fill);
+    doc.setDrawColor(...p.fill);
+    doc.roundedRect(x, top, w, h, 3, 3, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(...p.text);
+    doc.text(p.label, x + w / 2, top + 9.5, { align: 'center' });
+    return w + 8;
+  }
+
+  function drawSectionTitle(title) {
+    newPageIf(36);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(50);
+    doc.text(title, margin, y);
+    y += 6;
+    doc.setDrawColor(210);
+    doc.setLineWidth(0.5);
+    doc.line(margin, y, pageW - margin, y);
     y += 18;
+  }
 
-    if (todo.description) {
+  function drawTodoRow(todo) {
+    const title    = pdfSafe(todo.title);
+    const desc     = pdfSafe(todo.description || '');
+    const food     = foodTagFor(todo.title);
+    const titleLine = food ? `${title}  [${food}]` : title;
+    const wrapped  = doc.splitTextToSize(titleLine, contentW - 62);
+    const rowH     = 22 + (desc ? 14 + doc.splitTextToSize(desc, contentW - 20).length * 11 : 0)
+                   + (wrapped.length - 1) * 13;
+
+    newPageIf(rowH);
+
+    const baseline = y;
+    drawCheckbox(margin, baseline, todo.completed);
+    const pillX = margin + 20;
+    const textX = pillX + drawPriorityPill(pillX, baseline, todo.priority);
+
+    doc.setFont('helvetica', todo.completed ? 'normal' : 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(todo.completed ? 120 : 30);
+
+    if (todo.completed) {
+      const tw = doc.getTextWidth(wrapped[0] || titleLine);
+      doc.text(wrapped, textX, y);
+      doc.setDrawColor(170);
+      doc.setLineWidth(0.6);
+      doc.line(textX, y - 3, textX + Math.min(tw, contentW - 62), y - 3);
+    } else {
+      doc.text(wrapped, textX, y);
+    }
+    y += wrapped.length * 13 + 4;
+
+    if (desc) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(90);
-      const wrapped = doc.splitTextToSize(todo.description, 500);
-      doc.text(wrapped, margin + 14, y);
-      y += wrapped.length * 13 + 2;
-      doc.setFontSize(11);
-      doc.setTextColor(30);
+      doc.setTextColor(110);
+      const descLines = doc.splitTextToSize(desc, contentW - 20);
+      doc.text(descLines, margin + 20, y);
+      y += descLines.length * 11 + 4;
     }
-    y += 8;
-  });
+
+    y += 10;
+  }
+
+  // ── Header band ─────────────────────────────────────────────────────────────
+  doc.setFillColor(249, 115, 22);
+  doc.rect(0, 0, pageW, 72, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(22);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Checkmark', margin, 38);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.text('My Todos', margin, 56);
+
+  doc.setFontSize(10);
+  doc.text(new Date().toLocaleString(), pageW - margin, 38, { align: 'right' });
+  doc.text(`${done.length} of ${state.todos.length} complete`, pageW - margin, 54, { align: 'right' });
+
+  y = 96;
+
+  // ── Summary strip ───────────────────────────────────────────────────────────
+  doc.setFillColor(255, 247, 237);
+  doc.roundedRect(margin, y - 14, contentW, 28, 4, 4, 'F');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+  doc.text(`Open: ${open.length}   |   Done: ${done.length}   |   ${hourHint}`, margin + 12, y + 2);
+  y += 32;
+
+  if (open.length) {
+    drawSectionTitle(`Open (${open.length})`);
+    open.forEach(drawTodoRow);
+  }
+
+  if (done.length) {
+    drawSectionTitle(`Completed (${done.length})`);
+    done.forEach(drawTodoRow);
+  }
+
+  drawPageFooter();
 
   const date = new Date().toISOString().slice(0, 10);
   doc.save(`checkmark-todos-${date}.pdf`);

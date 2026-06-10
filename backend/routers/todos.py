@@ -62,6 +62,21 @@ def complete_todo(
     return todo
 
 
+@router.patch("/{todo_id}/uncomplete", response_model=TodoResponse)
+def uncomplete_todo(
+    todo_id: int,
+    current_user: User = CurrentUser,
+    db: Session = Depends(get_db),
+):
+    todo = todo_service.uncomplete_todo(db, todo_id, current_user.id)
+    if not todo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Todo not found.",
+        )
+    return todo
+
+
 @router.delete("/{todo_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_todo(
     todo_id: int,
