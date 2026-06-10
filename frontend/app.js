@@ -112,6 +112,80 @@ function esc(str) {
     .replace(/"/g, '&quot;');
 }
 
+// Sparkle style for letter "x" changes every hour (6 rotating styles)
+function xSparkleClass() {
+  return 'x-sparkle x-sparkle-' + (new Date().getHours() % 6);
+}
+
+function formatTodoTitle(title) {
+  const escaped = esc(title);
+  const cls = xSparkleClass();
+  return escaped.replace(/x/gi, m =>
+    `<span class="${cls}" aria-hidden="true">${m}</span>`
+  );
+}
+
+const FOOD_EMOJI = {
+  pizza: '🍕', burger: '🍔', taco: '🌮', sushi: '🍣', ramen: '🍜', pasta: '🍝',
+  salad: '🥗', soup: '🍲', sandwich: '🥪', bagel: '🥯', donut: '🍩', cake: '🍰',
+  cookie: '🍪', bread: '🍞', rice: '🍚', chicken: '🍗', steak: '🥩', fish: '🐟',
+  apple: '🍎', banana: '🍌', orange: '🍊', grape: '🍇', strawberry: '🍓',
+  blueberry: '🫐', mango: '🥭', peach: '🍑', watermelon: '🍉', pineapple: '🍍',
+  carrot: '🥕', broccoli: '🥦', tomato: '🍅', potato: '🥔', avocado: '🥑',
+  coffee: '☕', tea: '🍵', milk: '🥛', cheese: '🧀', egg: '🥚', bacon: '🥓',
+  waffle: '🧇', pancake: '🥞', cereal: '🥣', noodle: '🍜', burrito: '🌯',
+  hotdog: '🌭', fries: '🍟', popcorn: '🍿', candy: '🍬', chocolate: '🍫',
+  'ice cream': '🍦', yogurt: '🥛', dumpling: '🥟', shrimp: '🦐', crab: '🦀',
+  lobster: '🦞', oyster: '🦪', kebab: '🍢', bento: '🍱',
+  brunch: '🥞', lunch: '🥪', dinner: '🍽️', breakfast: '🥐', snack: '🍿',
+  food: '🍽️', eat: '😋', hungry: '🤤', restaurant: '🍽️', cafe: '☕',
+  bakery: '🥐', grocery: '🛒', baking: '🧁', bbq: '🍖', grill: '🔥',
+  smoothie: '🥤', juice: '🧃', wine: '🍷', beer: '🍺', cocktail: '🍹',
+  peanut: '🥜', almond: '🌰', honey: '🍯', curry: '🍛',
+};
+
+function foodEmojiFor(title) {
+  const lower = title.toLowerCase();
+  for (const [word, emoji] of Object.entries(FOOD_EMOJI)) {
+    if (lower.includes(word)) return emoji;
+  }
+  return null;
+}
+
+const ACTION_VERBS = [
+  'run', 'walk', 'buy', 'call', 'send', 'write', 'read', 'clean', 'wash', 'fix',
+  'build', 'make', 'go', 'email', 'text', 'study', 'work', 'exercise', 'practice',
+  'play', 'drive', 'meet', 'visit', 'pay', 'order', 'shop', 'plan', 'submit',
+  'finish', 'start', 'begin', 'learn', 'teach', 'help', 'move', 'pack', 'fold',
+  'sort', 'file', 'print', 'upload', 'download', 'install', 'update', 'remove',
+  'add', 'create', 'edit', 'draw', 'paint', 'sing', 'dance', 'jump', 'swim', 'bike',
+  'hike', 'climb', 'lift', 'stretch', 'meditate', 'volunteer', 'return', 'ship',
+  'mail', 'share', 'publish', 'record', 'cut', 'trim', 'mow', 'rake', 'sweep',
+  'vacuum', 'dust', 'scrub', 'polish', 'iron', 'sew', 'repair', 'organize',
+  'declutter', 'recycle', 'plant', 'water', 'harvest', 'bake', 'grill', 'fry',
+  'boil', 'steam', 'chop', 'slice', 'mix', 'stir', 'pour', 'serve', 'feed',
+  'pick', 'drop', 'deliver', 'fetch', 'grab', 'throw', 'catch', 'kick', 'push',
+  'pull', 'carry', 'drag', 'lift', 'open', 'close', 'lock', 'unlock', 'knock',
+  'ring', 'book', 'schedule', 'cancel', 'confirm', 'reply', 'answer', 'ask',
+];
+
+function hasActionVerb(title) {
+  const lower = title.toLowerCase();
+  return ACTION_VERBS.some(v => {
+    const re = new RegExp('\\b' + v + '(?:s|ed|ing)?\\b', 'i');
+    return re.test(lower);
+  });
+}
+
+function wiggleCard(todoId) {
+  requestAnimationFrame(() => {
+    const card = document.querySelector(`.todo-card[data-id="${todoId}"]`);
+    if (!card) return;
+    card.classList.add('card-wiggle');
+    setTimeout(() => card.classList.remove('card-wiggle'), 2000);
+  });
+}
+
 function todoCardHTML(todo) {
   const done = todo.completed;
 
@@ -136,6 +210,10 @@ function todoCardHTML(todo) {
     ? `<p class="text-xs mt-0.5 truncate" style="color:var(--text-muted);${mutedStyle}">${esc(todo.description)}</p>`
     : '';
 
+  const foodEmoji = foodEmojiFor(todo.title);
+  const titleHTML = formatTodoTitle(todo.title) +
+    (foodEmoji ? `<span class="food-emoji" title="Food detected!">${foodEmoji}</span>` : '');
+
   return `
     <div class="todo-card flex items-center gap-3 px-4 py-3.5 rounded-xl"
          style="background:var(--bg-card);border:1px solid var(--border);"
@@ -150,7 +228,7 @@ function todoCardHTML(todo) {
       </button>
 
       <div class="flex-1 min-w-0">
-        <p class="text-sm font-medium truncate" style="color:var(--text-primary);${titleStyle}">${esc(todo.title)}</p>
+        <p class="text-sm font-medium truncate" style="color:var(--text-primary);${titleStyle}">${titleHTML}</p>
         ${descHTML}
       </div>
 
@@ -298,18 +376,34 @@ async function handleFormSubmit(e) {
       const idx = state.todos.findIndex(t => t.id === state.editingId);
       if (idx !== -1) state.todos[idx] = updated;
       exitChaos();
+      closeModal();
+      renderAll();
+      checkTitleEffects(title, updated.id);
+      return;
     }
   } else {
     const created = await apiCreateTodo(data);
     if (created) {
       state.todos.unshift(created);
       exitChaos();
-      checkEasterEgg(title);
+      closeModal();
+      renderAll();
+      checkTitleEffects(title, created.id);
+      return;
     }
   }
 
   closeModal();
   renderAll();
+}
+
+function checkTitleEffects(title, todoId) {
+  checkEasterEgg(title);
+
+  const food = foodEmojiFor(title);
+  if (food) emojiParade([food, food, food, '😋']);
+
+  if (hasActionVerb(title)) wiggleCard(todoId);
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -484,34 +578,53 @@ function applyChaos() {
   state.chaosActive   = true;
   state.chaosSnapshot = [...state.todos];
 
+  document.body.classList.add('chaos-mode');
+
   // Shuffle display order
   state.todos = [...state.todos].sort(() => Math.random() - 0.5);
   renderTodos();
 
-  // Apply random tilts to each card
+  const chaosEmojis = ['🎲', '🌀', '👻', '🤪', '✨', '🔀', '💫', '🃏'];
+
   document.querySelectorAll('.todo-card').forEach(card => {
-    const rot = (Math.random() - 0.5) * 10;
-    const tx  = (Math.random() - 0.5) * 16;
-    const ty  = (Math.random() - 0.5) * 6;
-    card.style.transition = 'transform 0.35s ease, box-shadow 0.35s ease';
-    card.style.transform  = `rotate(${rot}deg) translate(${tx}px, ${ty}px)`;
-    card.style.zIndex     = String(Math.floor(Math.random() * 5) + 1);
-    card.style.boxShadow  = `${tx / 3}px ${Math.abs(ty) + 2}px 18px rgba(0,0,0,0.09)`;
+    const rot = (Math.random() - 0.5) * 18;
+    const tx  = (Math.random() - 0.5) * 28;
+    const ty  = (Math.random() - 0.5) * 12;
+    const hue = Math.floor(Math.random() * 360);
+    card.style.transition = 'transform 0.35s ease, box-shadow 0.35s ease, filter 0.35s ease';
+    card.style.transform  = `rotate(${rot}deg) translate(${tx}px, ${ty}px) scale(${0.92 + Math.random() * 0.16})`;
+    card.style.zIndex     = String(Math.floor(Math.random() * 8) + 1);
+    card.style.boxShadow  = `${tx / 3}px ${Math.abs(ty) + 4}px 22px rgba(0,0,0,0.12)`;
+    card.style.filter     = `hue-rotate(${hue}deg) saturate(${1.1 + Math.random() * 0.5})`;
+    card.classList.add('chaos-float');
+    card.style.animationDelay = (Math.random() * 1.2) + 's';
   });
 
-  document.getElementById('chaos-btn').textContent = '🌀';
+  const fill = document.getElementById('progress-fill');
+  if (fill) fill.classList.add('chaos-spin');
+
+  document.getElementById('chaos-btn').textContent =
+    chaosEmojis[Math.floor(Math.random() * chaosEmojis.length)];
   document.getElementById('undo-chaos-btn').classList.remove('hidden');
+
+  if (typeof confetti === 'function') {
+    confetti({ particleCount: 60, spread: 100, origin: { y: 0.7 }, ticks: 80 });
+  }
+}
+
+function clearChaosVisuals() {
+  document.body.classList.remove('chaos-mode');
+  const fill = document.getElementById('progress-fill');
+  if (fill) fill.classList.remove('chaos-spin');
+  document.getElementById('chaos-btn').textContent = '🎲';
+  document.getElementById('undo-chaos-btn').classList.add('hidden');
 }
 
 function undoChaos() {
   state.chaosActive = false;
   state.todos       = [...state.chaosSnapshot];
-
-  renderTodos(); // re-renders with restored order, no inline styles
-
-  // The cards are freshly rendered so no need to clear inline styles
-  document.getElementById('chaos-btn').textContent = '🎲';
-  document.getElementById('undo-chaos-btn').classList.add('hidden');
+  clearChaosVisuals();
+  renderTodos();
 }
 
 // Exit chaos silently (on add / edit / delete — no snapshot restore)
@@ -519,8 +632,7 @@ function exitChaos() {
   if (!state.chaosActive) return;
   state.chaosActive   = false;
   state.chaosSnapshot = [];
-  document.getElementById('chaos-btn').textContent = '🎲';
-  document.getElementById('undo-chaos-btn').classList.add('hidden');
+  clearChaosVisuals();
 }
 
 // ── Toast notification ────────────────────────────────────────────────────────
