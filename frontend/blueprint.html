@@ -316,7 +316,7 @@
             </div>
             <div class="bg-amber-500/5 border border-amber-500/15 rounded-lg px-4 py-3">
               <p class="text-xs text-amber-400/70 uppercase tracking-wider mb-1 font-medium">Tradeoff</p>
-              <p class="text-white/50 text-xs leading-relaxed">Two Railway services instead of one — CORS headers must be configured and there are two deploy logs to monitor.</p>
+              <p class="text-white/50 text-xs leading-relaxed">Python on the backend means a separate runtime from the static frontend — solved by serving the frontend from FastAPI in one Railway service.</p>
             </div>
           </div>
         </div>
@@ -394,7 +394,7 @@
             </div>
             <div>
               <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Decision</p>
-              <p class="text-white/70 text-sm">Use Railway for all services — static frontend, Python backend, and PostgreSQL.</p>
+              <p class="text-white/70 text-sm">Use Railway for one app service (FastAPI serves API + frontend) plus PostgreSQL.</p>
             </div>
             <div>
               <p class="text-xs text-white/40 uppercase tracking-wider mb-2 font-medium">Reasons</p>
@@ -500,6 +500,7 @@
               </tr>
               <tr><td class="px-4 py-2.5 mono text-indigo-300">completed</td><td class="px-4 py-2.5 text-white/50">boolean</td><td class="px-4 py-2.5 text-white/30">default false</td></tr>
               <tr><td class="px-4 py-2.5 mono text-indigo-300">created_at</td><td class="px-4 py-2.5 text-white/50">timestamp</td><td class="px-4 py-2.5 text-white/30">auto</td></tr>
+              <tr><td class="px-4 py-2.5 mono text-indigo-300">completed_at</td><td class="px-4 py-2.5 text-white/50">timestamp</td><td class="px-4 py-2.5 text-white/30">set on complete, cleared on undo</td></tr>
             </tbody>
           </table>
         </div>
@@ -550,6 +551,16 @@
             <code class="text-sm text-white/80">/auth/logout</code>
             <span class="text-white/40 text-sm ml-auto hidden sm:block">Log out, invalidates the token</span>
           </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-get border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">GET</span>
+            <code class="text-sm text-white/80">/auth/google</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Start Google OAuth sign-in</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-get border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">GET</span>
+            <code class="text-sm text-white/80">/auth/google/callback</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">OAuth callback — issues auth token</span>
+          </div>
 
           <!-- Todos group -->
           <div class="px-5 py-2 bg-white/1">
@@ -574,6 +585,11 @@
             <span class="badge-patch border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">PATCH</span>
             <code class="text-sm text-white/80">/todos/<span class="text-white/40">{id}</span>/complete</code>
             <span class="text-white/40 text-sm ml-auto hidden sm:block">Mark a todo as complete</span>
+          </div>
+          <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
+            <span class="badge-patch border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">PATCH</span>
+            <code class="text-sm text-white/80">/todos/<span class="text-white/40">{id}</span>/uncomplete</code>
+            <span class="text-white/40 text-sm ml-auto hidden sm:block">Undo complete — checkbox toggles both ways</span>
           </div>
           <div class="flex items-center gap-4 px-5 py-3.5 hover:bg-white/2 transition-colors">
             <span class="badge-delete border rounded px-2 py-0.5 text-xs mono font-semibold w-16 text-center flex-shrink-0">DELETE</span>
@@ -666,12 +682,65 @@
         <h2 class="text-2xl font-bold">Out of Scope <span class="text-white/30 font-normal text-lg">— for now</span></h2>
       </div>
       <div class="flex flex-wrap gap-3">
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Chaos button</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Easter eggs on keywords</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Daily themes</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Sound effects</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Confetti &amp; particle effects</span>
         <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Due dates on todos</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Sound effects</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Drag-and-drop reorder</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Shared / team todos</span>
+        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Mobile app</span>
+      </div>
+    </section>
+
+    <!-- ─── Easter eggs & fun ─── -->
+    <section class="reveal space-y-6">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">07</span>
+        <h2 class="text-2xl font-bold">Easter eggs &amp; fun</h2>
+      </div>
+      <p class="text-white/40 text-sm">Frontend-only polish — nothing here touches the API or database.</p>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Hourly letter</p>
+          <p class="text-white/60 text-sm leading-relaxed">Each hour highlights a different letter and color. The nav shows a hint; saving a todo flashes matching letters in the title for ~5 seconds.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Food words</p>
+          <p class="text-white/60 text-sm leading-relaxed">Titles with food words (e.g. <span class="text-white/80">buy mango</span>) get a matching emoji on the card and a mini emoji parade on save. PDF export skips the extra emoji when the title has words.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Action verbs</p>
+          <p class="text-white/60 text-sm leading-relaxed">Titles with verbs like <span class="text-white/80">run</span>, <span class="text-white/80">buy</span>, or <span class="text-white/80">call</span> make the card jump briefly on save.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Keyword easter eggs</p>
+          <p class="text-white/60 text-sm leading-relaxed">Saving a todo whose title contains certain words triggers a floating emoji parade — one keyword per save:</p>
+          <p class="text-white/40 text-xs mono leading-relaxed mt-1">walk · dog · gym · water · coffee · pizza · sleep · read · cook · email · clean · grass · run · music · shop</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Chaos button</p>
+          <p class="text-white/60 text-sm leading-relaxed">Shuffles the list, tilts the page, floats cards, spins the progress bar hue, and fires confetti. Undo restores the original order.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Completion celebrations</p>
+          <p class="text-white/60 text-sm leading-relaxed">Sparkles on the checkbox when you check something off. Confetti when every todo is done.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Themes</p>
+          <p class="text-white/60 text-sm leading-relaxed">Six color themes including dark mode. PDF export uses your active theme color for the header and accents.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="font-semibold text-sm">Stats &amp; PDF</p>
+          <p class="text-white/60 text-sm leading-relaxed">Progress bar shows done count and percent. A line below lists priority breakdown and added-today count. Export groups open todos by added date and completed todos by done date, with timestamps on each row.</p>
+        </div>
+
       </div>
     </section>
 

@@ -311,30 +311,17 @@ function computeStats() {
 }
 
 function updateStatsPanel() {
-  const panel  = document.getElementById('stats-panel');
   const detail = document.getElementById('stats-detail');
-  if (!panel) return;
+  if (!detail) return;
 
   const s = computeStats();
-  const chips = [
-    { value: s.open,        label: 'Open' },
-    { value: s.done,        label: 'Done' },
-    { value: s.pct + '%',   label: 'Complete' },
-    { value: s.addedToday,  label: 'Added today' },
-    { value: s.doneToday,   label: 'Done today' },
-    { value: s.openP.high,  label: 'Open high' },
-    { value: s.openP.medium, label: 'Open med' },
-    { value: s.openP.low,   label: 'Open low' },
-  ];
-
-  panel.innerHTML = chips.map(c =>
-    `<div class="stat-chip"><div class="stat-value">${c.value}</div><div class="stat-label">${c.label}</div></div>`
-  ).join('');
-
-  if (detail) {
-    detail.textContent =
-      `High ${s.prio.high} · Medium ${s.prio.medium} · Low ${s.prio.low} — ${s.total} total`;
+  if (!s.total) {
+    detail.textContent = '';
+    return;
   }
+
+  detail.textContent =
+    `High ${s.prio.high} · Medium ${s.prio.medium} · Low ${s.prio.low} · Added today ${s.addedToday}`;
 }
 
 function jumpCard(todoId) {
@@ -1017,26 +1004,27 @@ function exportTodosPDF() {
   doc.text(pdfSafe(new Date().toLocaleString()), pageW - margin, 40, { align: 'right' });
   doc.text(`${stats.done} of ${stats.total} complete (${stats.pct}%)`, pageW - margin, 58, { align: 'right' });
 
-  y = 100;
+  y = 96;
 
-  // Stats grid
-  doc.setFillColor(...theme.page);
-  doc.roundedRect(margin, y - 12, contentW, 54, 5, 5, 'F');
-  const statRow = [
-    `Open: ${stats.open}`,
-    `Done: ${stats.done}`,
-    `Today +${stats.addedToday}`,
-    `Done today ${stats.doneToday}`,
-    `High ${stats.prio.high} / Med ${stats.prio.medium} / Low ${stats.prio.low}`,
-    `Open high ${stats.openP.high} / med ${stats.openP.medium} / low ${stats.openP.low}`,
+  const statLines = [
+    `High ${stats.prio.high}  ·  Medium ${stats.prio.medium}  ·  Low ${stats.prio.low}`,
+    `Added today ${stats.addedToday}  ·  Done today ${stats.doneToday}`,
   ];
+  const statsBoxH = statLines.length * 14 + 16;
+
+  doc.setFillColor(...theme.light);
+  doc.roundedRect(margin, y - 10, contentW, statsBoxH, 5, 5, 'F');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(70);
-  statRow.forEach((line, i) => {
-    doc.text(pdfSafe(line), margin + 12, y + i * 11);
+  doc.setTextColor(55);
+  statLines.forEach((line, i) => {
+    doc.text(pdfSafe(line), margin + 12, y + 4 + i * 14);
   });
-  y += 58;
+  y += statsBoxH + 10;
+  doc.setDrawColor(...theme.accent);
+  doc.setLineWidth(0.5);
+  doc.line(margin, y, pageW - margin, y);
+  y += 16;
 
   if (openGroups.length) {
     drawHeading(`Open (${stats.open})`, 13);
@@ -1044,6 +1032,14 @@ function exportTodosPDF() {
       drawDateHeader(`Added ${group.label}`);
       group.items.forEach(drawTodoRow);
     });
+  }
+
+  if (doneGroups.length && openGroups.length) {
+    y += 6;
+    doc.setDrawColor(220);
+    doc.setLineWidth(0.4);
+    doc.line(margin, y, pageW - margin, y);
+    y += 14;
   }
 
   if (doneGroups.length) {

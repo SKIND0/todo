@@ -239,26 +239,6 @@
 
     #hour-hint { color: var(--text-muted); }
 
-    .stat-chip {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 12px;
-    }
-    .stat-chip .stat-value {
-      font-size: 1.125rem;
-      font-weight: 800;
-      color: var(--accent);
-      line-height: 1.2;
-    }
-    .stat-chip .stat-label {
-      font-size: 0.6875rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-top: 2px;
-    }
     .todo-meta { font-size: 0.6875rem; color: var(--text-muted); margin-top: 2px; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -319,8 +299,7 @@
         <div id="progress-fill" class="h-2.5 rounded-full" style="background:var(--accent);width:0%;"></div>
       </div>
 
-      <div id="stats-panel" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-4"></div>
-      <p id="stats-detail" class="text-xs mt-2.5 text-center" style="color:var(--text-muted);"></p>
+      <p id="stats-detail" class="text-xs mt-3 text-center" style="color:var(--text-muted);"></p>
     </div>
   </div>
 
