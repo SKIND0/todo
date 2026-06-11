@@ -741,7 +741,7 @@ function applyChaos() {
   state.chaosActive   = true;
   state.chaosSnapshot = [...state.todos];
 
-  document.body.classList.add('chaos-mode');
+  document.getElementById('app-shell')?.classList.add('chaos-mode');
 
   // Shuffle display order
   state.todos = [...state.todos].sort(() => Math.random() - 0.5);
@@ -776,7 +776,7 @@ function applyChaos() {
 }
 
 function clearChaosVisuals() {
-  document.body.classList.remove('chaos-mode');
+  document.getElementById('app-shell')?.classList.remove('chaos-mode');
   const fill = document.getElementById('progress-fill');
   if (fill) fill.classList.remove('chaos-spin');
   document.getElementById('chaos-btn').textContent = '🎲';
@@ -1004,27 +1004,29 @@ function exportTodosPDF() {
   doc.text(pdfSafe(new Date().toLocaleString()), pageW - margin, 40, { align: 'right' });
   doc.text(`${stats.done} of ${stats.total} complete (${stats.pct}%)`, pageW - margin, 58, { align: 'right' });
 
-  y = 96;
-
   const statLines = [
     `High ${stats.prio.high}  ·  Medium ${stats.prio.medium}  ·  Low ${stats.prio.low}`,
     `Added today ${stats.addedToday}  ·  Done today ${stats.doneToday}`,
   ];
-  const statsBoxH = statLines.length * 14 + 16;
+  const statLineH   = 13;
+  const statPad     = 12;
+  const statsBoxTop = 88;
+  const statsBoxH   = statLines.length * statLineH + statPad * 2;
 
   doc.setFillColor(...theme.light);
-  doc.roundedRect(margin, y - 10, contentW, statsBoxH, 5, 5, 'F');
+  doc.roundedRect(margin, statsBoxTop, contentW, statsBoxH, 5, 5, 'F');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
   doc.setTextColor(55);
   statLines.forEach((line, i) => {
-    doc.text(pdfSafe(line), margin + 12, y + 4 + i * 14);
+    doc.text(pdfSafe(line), margin + 12, statsBoxTop + statPad + (i + 1) * statLineH - 2);
   });
-  y += statsBoxH + 10;
+
+  y = statsBoxTop + statsBoxH + 14;
   doc.setDrawColor(...theme.accent);
   doc.setLineWidth(0.5);
   doc.line(margin, y, pageW - margin, y);
-  y += 16;
+  y += 22;
 
   if (openGroups.length) {
     drawHeading(`Open (${stats.open})`, 13);

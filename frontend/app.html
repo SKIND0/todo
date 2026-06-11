@@ -177,12 +177,12 @@
     #chaos-btn { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     #chaos-btn:hover { transform: scale(1.1) rotate(18deg); box-shadow: 0 8px 24px rgba(0,0,0,0.14); }
 
-    body.chaos-mode { animation: chaosTilt 3s ease-in-out infinite alternate; }
+    #app-shell.chaos-mode { animation: chaosTilt 3s ease-in-out infinite alternate; }
     @keyframes chaosTilt {
       from { transform: rotate(-0.6deg); }
       to   { transform: rotate(0.6deg); }
     }
-    body.chaos-mode .todo-card.chaos-float {
+    #app-shell.chaos-mode .todo-card.chaos-float {
       animation: chaosFloat 2.4s ease-in-out infinite;
     }
     @keyframes chaosFloat {
@@ -239,6 +239,11 @@
 
     #hour-hint { color: var(--text-muted); }
 
+    #chaos-controls {
+      bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+      right: max(1.25rem, env(safe-area-inset-right, 0px));
+    }
+
     .todo-meta { font-size: 0.6875rem; color: var(--text-muted); margin-top: 2px; }
   </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -252,19 +257,21 @@
     }
   </script>
 
+  <div id="app-shell" class="flex flex-col flex-1 min-h-screen">
+
   <!-- ─── Nav ─── -->
-  <nav class="sticky top-0 z-40 grid grid-cols-3 items-center px-6 sm:px-8 py-4 backdrop-blur-sm"
+  <nav class="sticky top-0 z-40 px-4 sm:px-8 py-3 backdrop-blur-sm"
        style="background-color:var(--bg-page);border-bottom:1px solid var(--border);">
-
-    <a href="/" class="font-black text-lg tracking-tight justify-self-start" style="color:var(--text-primary);">✓ Checkmark</a>
-
-    <p id="hour-hint" class="hidden sm:block text-xs font-medium text-center justify-self-center px-2 truncate" title="Hourly letter easter egg"></p>
-
-    <div class="flex items-center gap-4 justify-self-end">
-      <button id="logout-btn" class="site-link text-sm font-medium">Log out</button>
-
-      <!-- Theme switcher -->
-      <div class="relative">
+    <div class="max-w-2xl mx-auto">
+      <div class="flex items-center justify-between gap-3">
+        <a href="/" class="flex items-center gap-1.5 font-black text-lg tracking-tight whitespace-nowrap shrink-0"
+           style="color:var(--text-primary);">
+          <span aria-hidden="true">✓</span><span>Checkmark</span>
+        </a>
+        <div class="flex items-center gap-3 shrink-0">
+          <button id="logout-btn" class="site-link text-sm font-medium">Log out</button>
+          <!-- Theme switcher -->
+          <div class="relative">
         <button id="theme-btn" class="flex items-center justify-center w-9 h-9 rounded-full"
                 style="background-color:var(--bg-subtle);" title="Change theme" aria-label="Change theme">
           <svg width="18" height="18" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -283,8 +290,12 @@
           <button class="theme-dot" data-theme="rose"   style="background:#e11d48;" title="Rose"></button>
           <button class="theme-dot" data-theme="forest" style="background:#16a34a;" title="Forest"></button>
           <button class="theme-dot" data-theme="dark"   style="background:linear-gradient(135deg,#1a1d27 55%,#818cf8 55%);" title="Dark"></button>
+          </div>
+        </div>
         </div>
       </div>
+      <p id="hour-hint" class="text-xs font-medium text-center mt-2 px-1 truncate"
+         title="Hourly letter easter egg"></p>
     </div>
   </nav>
 
@@ -351,8 +362,10 @@
     </div>
   </main>
 
-  <!-- ─── Chaos / Undo buttons (fixed bottom-right) ─── -->
-  <div class="fixed bottom-6 right-6 flex flex-col items-end gap-3 z-30">
+  </div><!-- /#app-shell -->
+
+  <!-- ─── Chaos / Undo buttons (fixed — outside app-shell so tilt doesn't break position) ─── -->
+  <div id="chaos-controls" class="fixed flex flex-col-reverse items-end gap-3 z-50">
     <button id="undo-chaos-btn"
             class="hidden btn-outline text-sm px-4 py-2 rounded-full shadow-lg"
             style="background:var(--bg-card);">
