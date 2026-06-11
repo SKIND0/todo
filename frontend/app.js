@@ -950,8 +950,8 @@ function exportTodosPDF() {
     const wrapped   = doc.splitTextToSize(titleLine, contentW - 62);
     const metaLines = meta ? doc.splitTextToSize(meta, contentW - 62) : [];
     const descLines = desc ? doc.splitTextToSize(desc, contentW - 20) : [];
-    const rowH      = 20 + wrapped.length * 13 + metaLines.length * 10
-                    + descLines.length * 11 + 12;
+    const rowH      = 20 + wrapped.length * 13 + descLines.length * 11
+                    + metaLines.length * 10 + 12;
 
     newPageIf(rowH);
 
@@ -972,19 +972,20 @@ function exportTodosPDF() {
     }
     y += wrapped.length * 13 + 2;
 
+    if (descLines.length) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      doc.text(descLines, textX, y);
+      y += descLines.length * 11 + 2;
+    }
+
     if (metaLines.length) {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
       doc.setTextColor(120);
       doc.text(metaLines, textX, y);
       y += metaLines.length * 10 + 2;
-    }
-
-    if (descLines.length) {
-      doc.setFontSize(9);
-      doc.setTextColor(100);
-      doc.text(descLines, margin + 20, y);
-      y += descLines.length * 11 + 2;
     }
 
     y += 8;
@@ -1004,32 +1005,10 @@ function exportTodosPDF() {
   doc.text(pdfSafe(new Date().toLocaleString()), pageW - margin, 40, { align: 'right' });
   doc.text(`${stats.done} of ${stats.total} complete (${stats.pct}%)`, pageW - margin, 58, { align: 'right' });
 
-  const statLines = [
-    `High ${stats.prio.high}  ·  Medium ${stats.prio.medium}  ·  Low ${stats.prio.low}`,
-    `Added today ${stats.addedToday}  ·  Done today ${stats.doneToday}`,
-  ];
-  const statLineH   = 13;
-  const statPad     = 12;
-  const statsBoxTop = 88;
-  const statsBoxH   = statLines.length * statLineH + statPad * 2;
-
-  doc.setFillColor(...theme.light);
-  doc.roundedRect(margin, statsBoxTop, contentW, statsBoxH, 5, 5, 'F');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(55);
-  statLines.forEach((line, i) => {
-    doc.text(pdfSafe(line), margin + 12, statsBoxTop + statPad + (i + 1) * statLineH - 2);
-  });
-
-  y = statsBoxTop + statsBoxH + 14;
-  doc.setDrawColor(...theme.accent);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pageW - margin, y);
-  y += 22;
+  y = 96;
 
   if (openGroups.length) {
-    drawHeading(`Open (${stats.open})`, 13);
+    drawHeading('Open', 13);
     openGroups.forEach(group => {
       drawDateHeader(`Added ${group.label}`);
       group.items.forEach(drawTodoRow);
@@ -1045,7 +1024,7 @@ function exportTodosPDF() {
   }
 
   if (doneGroups.length) {
-    drawHeading(`Completed (${stats.done})`, 13);
+    drawHeading('Completed', 13);
     doneGroups.forEach(group => {
       drawDateHeader(`Completed ${group.label}`);
       group.items.forEach(drawTodoRow);
