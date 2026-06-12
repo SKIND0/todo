@@ -13,17 +13,20 @@ Follow it on every request. Do not introduce anything not listed here.
 | Styling | Tailwind CSS (CDN) | Utility classes only, no custom CSS files |
 | Backend | FastAPI (Python) | Routers, Pydantic models, services pattern |
 | Database | PostgreSQL | Via Railway native plugin, SQLAlchemy ORM |
-| Hosting | Railway | Two services: static frontend + Python backend |
+| Hosting | Railway | One app service (FastAPI serves API + frontend) + PostgreSQL plugin |
 
 ---
 
 ## Architecture Rules
 
-- Follow ADRs in `/docs/architectural-decisions.md` — every technology choice is documented there
-- Follow the spec in `/docs/specs.md` — data model, API, user stories, acceptance criteria
-- Frontend is static files only: `index.html`, `home.js`, and page-specific JS files
+- Follow ADRs in `architectural-decisions.md` (repo root) — every technology choice is documented there
+- Follow the spec in `specs.md` (repo root) — data model, API, user stories, acceptance criteria
+- This file (`.github/copilot-instructions.md`) is the day-to-day source of truth for Copilot
+- Frontend is static files only: `index.html`, `home.js`, `config.js`, and page-specific JS files
 - No bundlers, no npm on the frontend — Tailwind loads from CDN
+- In production, FastAPI serves the frontend from `frontend/` on the same Railway service (see `backend/main.py`)
 - Backend follows FastAPI best practices: separate routers per resource, Pydantic schemas, service layer
+- API routes have no `/api` prefix — endpoints are `/auth/...` and `/todos/...` at the root
 - Do NOT introduce new technologies not listed in the stack above
 - Do NOT add complexity beyond what the spec requires
 - Keep code readable and minimal
@@ -58,20 +61,38 @@ created_at    timestamp, auto
 
 ### Todos table
 ```
-id          integer, auto, PK
-user_id     integer, FK → users.id
-title       string, required
-description string, optional
-priority    enum: low / medium / high
-completed   boolean, default false
-created_at  timestamp, auto
+id            integer, auto, PK
+user_id       integer, FK → users.id
+title         string, required
+description   string, optional
+priority      enum: low / medium / high
+completed     boolean, default false
+created_at    timestamp, auto
+completed_at  timestamp, nullable — set on complete, cleared on uncomplete
+```
+
+---
+
+## Environment Variables
+
+Set in `.env` locally (see `.env.example`) and in Railway's Variables tab for production.
+
+```
+DATABASE_URL          — PostgreSQL connection string (Railway injects for Postgres plugin)
+JWT_SECRET            — signs auth tokens; long random string, never hardcoded
+SESSION_SECRET        — required for Google OAuth session state (authlib)
+ALLOWED_ORIGINS       — comma-separated CORS origins (local dev + production URL)
+FRONTEND_URL          — used for OAuth redirects and post-login routing
+GOOGLE_CLIENT_ID      — from Google Cloud Console
+GOOGLE_CLIENT_SECRET  — from Google Cloud Console
+GOOGLE_REDIRECT_URI   — e.g. https://your-app.up.railway.app/auth/google/callback
 ```
 
 ---
 
 ## API Endpoints
 
-All `/todos` endpoints require a valid JWT token in the Authorization header.
+All `/todos` endpoints require a valid JWT token in the `Authorization: Bearer <token>` header.
 Requests without a token return 401.
 
 ```
@@ -79,13 +100,25 @@ POST   /auth/register           — create account with email + password
 POST   /auth/login              — login, returns JWT
 POST   /auth/logout             — invalidate token
 GET    /auth/google             — start Google OAuth flow
-GET    /auth/google/callback    — Google OAuth callback
+GET    /auth/google/callback    — Google OAuth callback, issues JWT
+
+GET    /health                  — health check (Railway pings this)
 
 GET    /todos                   — get all todos for logged-in user
 POST   /todos                   — create a new todo
 PUT    /todos/{id}              — edit title, description, or priority
-PATCH  /todos/{id}/complete     — mark as complete
+PATCH  /todos/{id}/complete     — mark as complete (sets completed_at)
+PATCH  /todos/{id}/uncomplete   — undo complete (clears completed_at)
 DELETE /todos/{id}              — permanently delete
+```
+
+### Frontend routes (served by FastAPI, not in OpenAPI schema)
+```
+/           — index.html (home)
+/login      — login.html
+/register   — register.html
+/app        — app.html (authenticated todo app)
+/blueprint  — blueprint.html (public architecture page)
 ```
 
 ---
@@ -94,34 +127,39 @@ DELETE /todos/{id}              — permanently delete
 
 ```
 /
+├── .github/
+│   └── copilot-instructions.md   — this file
+├── architectural-decisions.md    — ADRs (ADR-001 through ADR-006)
+├── specs.md                      — data model, API, user stories, acceptance criteria
+├── .env.example                  — template for local env vars
+├── railway.toml                  — production deploy: cd backend && uvicorn ...
+│
 ├── frontend/
 │   ├── index.html          — home page
 │   ├── home.js             — ghost background animation
-│   ├── login.html
-│   ├── login.js
-│   ├── register.html
-│   ├── register.js
-│   ├── app.html            — main todo app (authenticated)
-│   ├── app.js
+│   ├── config.js           — sets CHECKMARK_API_URL (localhost:8000 vs same origin)
+│   ├── login.html / login.js
+│   ├── register.html / register.js
+│   ├── app.html / app.js   — main todo app (authenticated)
 │   └── blueprint.html      — public architecture page
 │
-├── backend/
-│   ├── main.py
-│   ├── database.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── routers/
-│   │   ├── auth.py
-│   │   └── todos.py
-│   └── services/
-│       ├── auth_service.py
-│       └── todo_service.py
-│
-└── docs/
-    ├── architectural-decisions.md
-    ├── specs.md
-    └── copilot-instructions.md
+└── backend/
+    ├── main.py             — FastAPI app, serves API + frontend static files
+    ├── database.py
+    ├── models.py
+    ├── schemas.py
+    ├── routers/
+    │   ├── auth.py         — register, login, logout, Google OAuth
+    │   └── todos.py
+    └── services/
+        ├── auth_service.py
+        └── todo_service.py
 ```
+
+### Local development
+- Run backend: `cd backend && uvicorn main:app --reload` (port 8000)
+- Serve frontend separately (e.g. Live Server on port 5500) or open via FastAPI at `http://localhost:8000`
+- `config.js` points API calls at `http://localhost:8000` when hostname is localhost
 
 ---
 
@@ -167,8 +205,8 @@ low:     bg #f0fdf4  text #166534
 ```
 
 ### Completed todo
-- Checkbox: filled `#f97316`, white checkmark inside
-- Label: strikethrough, opacity 0.4
+- Checkbox: filled with `var(--accent)`, white checkmark inside
+- Label: strikethrough, reduced opacity
 
 ---
 
@@ -262,10 +300,25 @@ body[data-theme="forest"] {
 }
 ```
 
+**dark**
+```css
+body[data-theme="dark"] {
+  --bg-page:    #0f1117;
+  --bg-card:    #1a1d27;
+  --bg-subtle:  #252936;
+  --text-primary:   #f1f5f9;
+  --text-muted:   #94a3b8;
+  --border:       #2d3348;
+  --accent:       #818cf8;
+  --accent-hover: #6366f1;
+  --accent-light: #1e1b4b;
+}
+```
+
 ### Theme button UI
-- Lives in the top nav, right side, after login
-- Icon: a circle split into 4 colored quadrants (orange, purple, cyan, rose, green)
-- On click: opens a small inline popover with 5 colored circles, one per theme
+- Lives in the top nav, right side (on home, login, register, and app pages)
+- Icon: a circle split into 4 colored quadrants
+- On click: opens a small inline popover with 6 colored circles (cream, purple, sky, rose, forest, dark)
 - Active theme circle has a ring around it
 - No page reload needed — switching theme is instant via the CSS variable swap
 
@@ -281,9 +334,9 @@ body[data-theme="forest"] {
 ### Structure
 1. Ghost background (full viewport, behind everything)
 2. Pill badge: "Your chaos, organised" with indigo pulse dot
-3. Headline: "Win the day." then "Turn chaos into checkmarks." in indigo→violet gradient
+3. Headline: "Win the day." in text-primary, then "Turn chaos into checkmarks." in `var(--accent)` — no gradient
 4. Subtext: "The todo app that actually makes you feel good about getting stuff done."
-5. CTA: "Start Winning →" button (indigo, rounded-full, pulse ring animation)
+5. CTA: "Start Winning →" button (accent color, rounded-full)
 6. Secondary link: "Already winning? Log in"
 7. Micro-copy: "No credit card. No fluff. Just checkmarks."
 8. Footer: © Checkmark | Blueprint | Log in | Register
@@ -296,9 +349,6 @@ body[data-theme="forest"] {
 - 7 simultaneous ghost slots
 - 30% chance a todo gets checked before fading out
 - Checked state: strikethrough text, var(--accent) checkbox fill
-- Headline: "Win the day." in text-primary, 
-- "Turn chaos into checkmarks." in var(--accent)
-- no gradient, just the accent color. Bold and clean.
 
 ### Ghost todo items to cycle through
 ```
@@ -329,12 +379,13 @@ Public page. No login required. Linked in the footer of every page as "The Bluep
 1. Nav: back arrow to Home | "Blueprint" mono label | live spec indicator
 2. Hero: `/blueprint` pill badge, "How this thing is built" headline, stack summary pills
 3. Section 01 — Stack at a glance: table of layer / choice / core reason
-4. Section 02 — ADRs: accordion cards, one per decision, expandable with full reasoning
+4. Section 02 — ADRs: accordion cards (ADR-001 through ADR-005), expandable with full reasoning
 5. Section 03 — Data model: two tables (users, todos) side by side
 6. Section 04 — API surface: color-coded HTTP method badges (GET=green, POST=blue, PUT=amber, PATCH=purple, DELETE=red)
 7. Section 05 — User stories: card grid, one per story
-8. Section 06 — Out of scope: pill tags for planned enhancements
-9. Footer: © Checkmark | Home | Log in | Register
+8. Section 06 — Easter eggs & fun: frontend polish features
+9. Section 07 — Reflection: build retrospective
+10. Footer: © Checkmark | Home | Log in | Register
 
 ### ADR accordion behavior
 - Click to expand, click again to collapse
@@ -344,22 +395,26 @@ Public page. No login required. Linked in the footer of every page as "The Bluep
 
 ---
 
-## Planned Features (implement when building app.html)
+## App Features (implemented in app.html / app.js)
 
-### Core (in spec)
+### Core (from spec)
+- Register, log in (email/password or Google), log out
 - Create, view, edit, delete todos
-- Mark complete with visual change (strikethrough + emerald checkbox)
+- Mark complete / uncomplete (checkbox toggles both ways; sets/clears `completed_at`)
 - Filter by priority (low / medium / high / all)
 - User sees only their own todos
+- Progress bar with done count, percent, and priority breakdown
 
-### Fun enhancements (out of scope for spec, add during implementation)
-- **Chaos button**: click to trigger temporary visual chaos — options include tilting the page, shuffling todo order, or turning everything green. Shows an "undo" button to revert.
-- **Easter eggs**: detect specific words typed in todo titles and trigger a fun reaction. Example: typing "walk" triggers a walking emoji parade across the screen for 2 seconds.
-- **Confetti**: fire `canvas-confetti` when the last todo on the list is completed.
-- **Sparkle effect**: checkbox "explodes" into particles on completion.
-- **Sound effects**: optional, subtle sounds on create / complete / delete.
-- **Progress bar**: shows % of todos complete, wiggles happily when you hit 100%.
-- **Daily themes**: different subtle color palette each day of the week.
+### Fun enhancements (frontend-only — do not touch API or database)
+- **Chaos button**: shuffles list, tilts page, floats cards, spins progress bar; undo restores order
+- **Easter eggs**: keyword parade on save (walk, dog, gym, water, coffee, pizza, sleep, read, cook, email, clean, grass, run, music, shop)
+- **Food words**: matching emoji on card + mini parade on save
+- **Action verbs**: card jump animation on save (run, buy, call, etc.)
+- **Hourly letter**: highlights a letter/color each hour; flashes matching letters in title on save
+- **Confetti**: fires when every todo is complete (`canvas-confetti` CDN)
+- **Sparkle effect**: particle burst on checkbox completion
+- **Themes**: 6 themes (cream, purple, sky, rose, forest, dark) via CSS variables + localStorage
+- **PDF export**: grouped open/completed todos with timestamps (jsPDF CDN)
 
 For easter eggs and chaos — keep them as self-contained JS functions. Do not couple them to the core todo logic.
 
@@ -374,6 +429,8 @@ For easter eggs and chaos — keep them as self-contained JS functions. Do not c
 5. Always validate inputs with Pydantic on the backend
 6. Always handle errors — return proper HTTP status codes (400, 401, 404, 422)
 7. Keep frontend files simple and flat — one HTML file per page, one JS file per page
-8. CORS must be configured on FastAPI to allow requests from the frontend origin
-9. JWT secret must come from an environment variable — never hardcoded
+8. CORS must be configured on FastAPI — required for local dev when frontend and backend run on different ports
+9. JWT_SECRET and SESSION_SECRET must come from environment variables — never hardcoded
 10. DATABASE_URL must come from Railway environment — never hardcoded
+11. Google OAuth credentials and redirect URI must come from environment variables — never hardcoded
+12. When changing data model, API, or features — update `specs.md`, `architectural-decisions.md`, and `blueprint.html` to match

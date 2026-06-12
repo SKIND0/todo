@@ -528,7 +528,7 @@
       <div class="border border-white/8 rounded-xl overflow-hidden">
         <div class="px-5 py-3.5 border-b border-white/8 bg-white/3 flex items-center justify-between">
           <span class="text-sm font-semibold">Endpoints</span>
-          <span class="text-xs text-white/30 mono">base: /api</span>
+          <span class="text-xs text-white/30 mono">no /api prefix</span>
         </div>
         <div class="divide-y divide-white/5">
 
@@ -675,25 +675,10 @@
       </div>
     </section>
 
-    <!-- ─── Out of scope ─── -->
-    <section class="reveal space-y-6">
-      <div class="flex items-center gap-3">
-        <span class="text-indigo-400 font-mono text-sm">06</span>
-        <h2 class="text-2xl font-bold">Out of Scope <span class="text-white/30 font-normal text-lg">— for now</span></h2>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Due dates on todos</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Sound effects</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Drag-and-drop reorder</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Shared / team todos</span>
-        <span class="bg-white/3 border border-white/8 rounded-full px-4 py-2 text-sm text-white/50">Mobile app</span>
-      </div>
-    </section>
-
     <!-- ─── Easter eggs & fun ─── -->
     <section class="reveal space-y-6">
       <div class="flex items-center gap-3">
-        <span class="text-indigo-400 font-mono text-sm">07</span>
+        <span class="text-indigo-400 font-mono text-sm">06</span>
         <h2 class="text-2xl font-bold">Easter eggs &amp; fun</h2>
       </div>
       <p class="text-white/40 text-sm">Frontend-only polish — nothing here touches the API or database.</p>
@@ -739,6 +724,57 @@
         <div class="border border-white/8 rounded-xl p-5 space-y-2">
           <p class="font-semibold text-sm">Stats &amp; PDF</p>
           <p class="text-white/60 text-sm leading-relaxed">Progress bar shows done count and percent. A line below lists priority breakdown and added-today count. Export groups open todos by added date and completed todos by done date, with timestamps on each row.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─── Reflection ─── -->
+    <section class="reveal space-y-8">
+      <div class="flex items-center gap-3">
+        <span class="text-indigo-400 font-mono text-sm">07</span>
+        <h2 class="text-2xl font-bold">Reflection</h2>
+      </div>
+      <p class="text-white/40 text-sm">What worked, what stuck, and what I'd change next time.</p>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+
+        <div class="border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-5 space-y-3 sm:col-span-2">
+          <p class="text-xs text-emerald-400/80 uppercase tracking-wider font-medium">What went well</p>
+          <p class="text-white/70 text-sm leading-relaxed">Writing the ADRs beforehand really helped me stay on track — for myself and for Copilot. Railway hardly gave me any issues; deploy went smoothly. And getting Google OAuth in worked well too.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="text-xs text-indigo-400/70 uppercase tracking-wider font-medium">From ADRs</p>
+          <p class="text-white/70 text-sm leading-relaxed">Documenting the decisions upfront meant I wasn't second-guessing myself mid-build. We'd already decided on the important things — I could just refer back instead of re-litigating every choice.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="text-xs text-indigo-400/70 uppercase tracking-wider font-medium">From specs</p>
+          <p class="text-white/70 text-sm leading-relaxed">The spec set a contract. It made sure Copilot wouldn't go off and decide something on its own — the data model, API, and user stories were already laid out.</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="text-xs text-indigo-400/70 uppercase tracking-wider font-medium">From Copilot</p>
+          <p class="text-white/70 text-sm leading-relaxed">First time using it — felt a bit slow at first, but was really good once I got the hang of it. The copilot-instructions file helped a lot. Dropping in screenshots of what went wrong also worked well (probably eats a lot of tokens though).</p>
+        </div>
+
+        <div class="border border-white/8 rounded-xl p-5 space-y-2">
+          <p class="text-xs text-indigo-400/70 uppercase tracking-wider font-medium">From testing with Copilot</p>
+          <p class="text-white/70 text-sm leading-relaxed">Pretty good overall — I'd explain in detail what wasn't working and it would usually get it. But it only really understood the codebase. It wouldn't consider that the problem might be Railway's fault, or Google's. Not the best for that kind of debugging.</p>
+        </div>
+
+        <div class="border border-indigo-500/20 bg-indigo-500/5 rounded-xl p-5 space-y-3 sm:col-span-2">
+          <p class="text-xs text-indigo-400/80 uppercase tracking-wider font-medium">What I learned the most</p>
+          <p class="text-white/70 text-sm leading-relaxed">The programmer behind it still needs to feed in direct instructions and help majorly with instructions — that's really the only way it works out. Debugging was most of what I actually did. It kept making bugs.</p>
+        </div>
+
+        <div class="border border-amber-500/20 bg-amber-500/5 rounded-xl p-5 space-y-3 sm:col-span-2">
+          <p class="text-xs text-amber-400/80 uppercase tracking-wider font-medium">What I'd do differently next time</p>
+          <ul class="text-white/70 text-sm space-y-2 list-none">
+            <li class="flex gap-2"><span class="text-amber-400 mt-0.5">→</span>Be more detailed before starting to code. I jumped in mostly right after doing the bare minimum of research.</li>
+            <li class="flex gap-2"><span class="text-amber-400 mt-0.5">→</span>Update the specs, ADRs, and blueprint every time something changed — I didn't keep them in sync and I should have.</li>
+          </ul>
         </div>
 
       </div>

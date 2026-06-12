@@ -88,7 +88,7 @@ Use FastAPI with Python.
 - Pydantic validation is built in. You define the shape of your data once, and FastAPI automatically rejects any request that doesn't match — before your code even runs. With Flask you write that validation yourself or skip it.
 - FastAPI is async by default — built for modern Python, faster under load, and what you would actually choose starting a Python API project today.
 - AI writes FastAPI + SQLAlchemy + Postgres accurately. This combination is well-documented with a large base of examples.
-- Deployed as a separate Railway service alongside the static frontend — clean separation of concerns.
+- FastAPI serves the static frontend from the same service in production — one public Railway URL for the whole app.
 
 ### Alternatives Considered
 
@@ -102,7 +102,7 @@ Rejected. Express would require JavaScript on the backend, adding a second langu
 Rejected. Next.js collapses the frontend and backend into one service which reduces deploy complexity, but it couples two concerns that are cleaner when separate. It also requires committing to React on the frontend, which was already rejected in ADR-001.
 
 ### Tradeoffs Accepted
-Two Railway services instead of one — a static frontend and a Python backend. This means CORS headers must be configured and there are two deploy logs to monitor. For a small app this is manageable and the tradeoff is worth the benefits FastAPI provides.
+Local development runs the frontend and backend on different ports (`config.js` points the API at `localhost:8000`), so CORS must be configured. In production both are served from the same origin. Python on the backend is a separate runtime from the static frontend files — acceptable for the benefits FastAPI provides.
 
 ---
 
@@ -149,14 +149,14 @@ Accepted
 The app needs to be deployed somewhere accessible. The question is which hosting platform to use.
 
 ### Decision
-Use Railway for all services — static frontend, Python backend, and PostgreSQL database.
+Use Railway for one app service (FastAPI serves API + static frontend) plus PostgreSQL via the native database plugin.
 
 ### Reasons
 - Already paying for it. No cost justification, no new account, no free tier limitations to work around. The infrastructure decision was already made.
-- Railway removes deployment friction entirely. Connect a GitHub repo, it detects what's running, and deploys it. Push to main, it redeploys automatically.
-- Native Postgres plugin — one click, connection string injected into environment variables automatically.
+- Railway removes deployment friction entirely. Connect a GitHub repo, set the start command, and deploy. Push to main, it redeploys automatically.
+- Native Postgres plugin — one click, `DATABASE_URL` injected into environment variables automatically.
 - Environment variables, logs, and service health are all managed in a clean UI.
-- Supports both static sites and Python services under the same project — the entire stack lives in one Railway project.
+- One Python service serves both the API and the frontend static files — the entire app lives in one Railway project with one public URL.
 
 ### Alternatives Considered
 
@@ -174,6 +174,39 @@ Railway is not the cheapest option if cost were the primary concern. It is chose
 
 ---
 
+## ADR-006 — Authentication: Email/Password + Google OAuth
+
+### Status
+Accepted
+
+### Context
+Users need to sign in before accessing todos. The app should support a traditional email/password flow and Google sign-in without maintaining two separate user systems.
+
+### Decision
+Use JWT tokens for both login methods. Passwords are hashed with bcrypt. Google OAuth is handled on the FastAPI backend via `authlib`, with session middleware for OAuth state. Both flows create or find a user in the same `users` table and return the same JWT format.
+
+### Reasons
+- One `users` table — `password_hash` is null for Google users, `google_id` is null for password users.
+- `authlib` integrates cleanly with FastAPI/Starlette for the Google redirect flow.
+- JWT in `localStorage` keeps the vanilla JS frontend simple — no cookies to manage for API calls.
+- Google OAuth redirect URI and client credentials live in environment variables, not in code.
+
+### Alternatives Considered
+
+**Google only**
+Rejected. Email/password is simpler for local development and users who prefer not to use Google.
+
+**Separate Google user table**
+Rejected. Duplicates identity logic and makes todo ownership harder to enforce.
+
+**Session cookies instead of JWT**
+Rejected. Adds cookie/session complexity on the frontend for a small API-backed app. JWT in the Authorization header is straightforward for vanilla JS.
+
+### Tradeoffs Accepted
+Google OAuth requires correct redirect URI configuration in both Google Cloud Console and Railway — misconfiguration shows up as auth errors that are outside the codebase. Session middleware adds a required `SESSION_SECRET` environment variable.
+
+---
+
 ## Summary
 
 | Layer | Choice | Core Reason |
@@ -182,4 +215,5 @@ Railway is not the cheapest option if cost were the primary concern. It is chose
 | Styling | Tailwind CSS | Utility classes in one file, no separate CSS, AI generates accurately |
 | Backend | FastAPI (Python) | Built-in validation, live `/docs` page, async, modern |
 | Database | PostgreSQL | Structured relational data, Railway native plugin, industry standard |
-| Hosting | Railway | Already paid for, zero friction, native Postgres, GitHub integration |
+| Hosting | Railway | One app service + Postgres; already paid for, zero friction |
+| Auth | JWT + Google OAuth | Same user table, env-based secrets, works with vanilla JS |
